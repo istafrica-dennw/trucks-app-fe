@@ -1,0 +1,233 @@
+/* Metric Card Styles */
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  max-width: none;
+}
+
+.metric-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.metric-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+.metric-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.metric-card__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.metric-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.metric-card__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Icon Color Variants */
+.metric-card__icon--blue {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.metric-card__icon--green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.metric-card__icon--orange {
+  background: #fed7aa;
+  color: #ea580c;
+}
+
+.metric-card__icon--purple {
+  background: #e9d5ff;
+  color: #9333ea;
+}
+
+.metric-card__icon--red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.metric-card__icon--yellow {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.metric-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-card__value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.metric-card__description {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Card Color Variants */
+.metric-card--blue {
+  border-left: 4px solid #3b82f6;
+}
+
+.metric-card--green {
+  border-left: 4px solid #16a34a;
+}
+
+.metric-card--orange {
+  border-left: 4px solid #ea580c;
+}
+
+.metric-card--purple {
+  border-left: 4px solid #9333ea;
+}
+
+.metric-card--red {
+  border-left: 4px solid #dc2626;
+}
+
+.metric-card--yellow {
+  border-left: 4px solid #d97706;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .metric-card {
+    padding: 18px 20px;
+    min-height: 110px;
+  }
+  
+  .metric-card__value {
+    font-size: 30px;
+  }
+  
+  .metric-card__icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .metric-card__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .metric-card {
+    padding: 16px 18px;
+    min-height: 100px;
+  }
+  
+  .metric-card__value {
+    font-size: 26px;
+  }
+  
+  .metric-card__title {
+    font-size: 13px;
+  }
+  
+  .metric-card__description {
+    font-size: 13px;
+  }
+  
+  .metric-card__icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .metric-card__icon svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Focus and Accessibility */
+.metric-card:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .metric-card {
+    border: 2px solid #000;
+  }
+  
+  .metric-card--blue {
+    border-left: 6px solid #000;
+  }
+  
+  .metric-card--green {
+    border-left: 6px solid #000;
+  }
+  
+  .metric-card--orange {
+    border-left: 6px solid #000;
+  }
+  
+  .metric-card--purple {
+    border-left: 6px solid #000;
+  }
+  
+  .metric-card--red {
+    border-left: 6px solid #000;
+  }
+  
+  .metric-card--yellow {
+    border-left: 6px solid #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .metric-card {
+    transition: none;
+  }
+  
+  .metric-card:hover {
+    transform: none;
+  }
+}

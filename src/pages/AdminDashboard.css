@@ -1,0 +1,156 @@
+/* Admin Dashboard Styles - Mobile First */
+.admin-dashboard {
+  min-height: 100vh;
+  background: #f8fafc;
+  position: relative;
+  width: 100%;
+  max-width: none;
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: 60px; /* Account for mobile header */
+  width: 100%;
+  max-width: none;
+}
+
+.dashboard-header {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+
+.dashboard-title p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: none;
+  width: 100%;
+}
+
+/* Metrics Grid - Mobile First */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+}
+
+/* Activity Section */
+.activity-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* Tablet and Desktop Responsive Design */
+@media (min-width: 769px) {
+  .dashboard-main {
+    margin-left: 280px;
+    padding-top: 0; /* Remove mobile header padding */
+    width: calc(100% - 280px);
+  }
+  
+  .dashboard-header {
+    padding: 24px 32px;
+  }
+  
+  .dashboard-title h1 {
+    font-size: 28px;
+  }
+  
+  .dashboard-title p {
+    font-size: 16px;
+  }
+  
+  .dashboard-content {
+    padding: 32px;
+    gap: 32px;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: none;
+  }
+  
+  .activity-section {
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-main {
+    margin-left: 280px;
+    width: calc(100% - 280px);
+  }
+  
+  .dashboard-content {
+    padding: 40px;
+    gap: 40px;
+  }
+  
+  .metrics-grid {
+    gap: 28px;
+  }
+  
+  .activity-section {
+    gap: 32px;
+  }
+}
+
+/* Focus and Accessibility */
+.admin-dashboard:focus-within {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .dashboard-header {
+    border-bottom: 2px solid #000;
+  }
+  
+  .dashboard-title h1 {
+    color: #000;
+  }
+  
+  .dashboard-title p {
+    color: #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard {
+    transition: none;
+  }
+}
