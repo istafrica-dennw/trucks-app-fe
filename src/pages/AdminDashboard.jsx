@@ -13,6 +13,7 @@ const AdminDashboard = () => {
   const [userStats, setUserStats] = useState(null);
   const [truckStats, setTruckStats] = useState(null);
   const [driverStats, setDriverStats] = useState(null);
+  const [driveStats, setDriveStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const toggleSidebar = () => {
@@ -74,6 +75,24 @@ const AdminDashboard = () => {
       setDriverStats(data.data);
     } catch (error) {
       console.error('Error fetching driver stats:', error);
+    }
+  };
+
+  // Fetch drive statistics
+  const fetchDriveStats = async () => {
+    try {
+      const response = await fetch(createApiUrl('api/drives/stats'), {
+        headers: createAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch drive statistics');
+      }
+
+      const data = await response.json();
+      setDriveStats(data.data);
+    } catch (error) {
+      console.error('Error fetching drive stats:', error);
     } finally {
       setLoading(false);
     }
@@ -84,6 +103,7 @@ const AdminDashboard = () => {
       fetchUserStats();
       fetchTruckStats();
       fetchDriverStats();
+      fetchDriveStats();
     }
   }, [token]);
 
@@ -113,8 +133,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Journeys',
-      value: '156',
-      description: '+12 this week',
+      value: loading ? '...' : (driveStats ? driveStats.total.toString() : '0'),
+      description: driveStats ? `${driveStats.completed} completed` : 'Loading...',
       color: 'orange',
       icon: (
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
