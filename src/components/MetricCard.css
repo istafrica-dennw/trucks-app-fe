@@ -8,7 +8,7 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

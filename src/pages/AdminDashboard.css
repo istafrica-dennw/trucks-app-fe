@@ -16,6 +16,21 @@
   max-width: none;
 }
 
+/* Add extra padding on mobile for browser URL bar */
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 60px); /* Header + safe area + browser URL bar */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* Bottom nav bar + safe area */
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    transition: padding-top 0.3s ease;
+  }
+  
+  /* Reduce top padding when header is hidden */
+  body.mobile-header-hidden .dashboard-main {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 60px); /* Safe area + browser URL bar (header height removed) */
+  }
+}
+
 .dashboard-header {
   background: white;
   border-bottom: 1px solid #e2e8f0;
@@ -23,8 +38,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.dashboard-title {
+  text-align: center;
+}
+
 .dashboard-title h1 {
-  font-size: 24px;
+  font-size: 2.25rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 4px 0;
@@ -32,7 +51,7 @@
 }
 
 .dashboard-title p {
-  font-size: 14px;
+  font-size: 1rem;
   color: #64748b;
   margin: 0;
   line-height: 1.4;
@@ -68,7 +87,7 @@
 @media (min-width: 769px) {
   .dashboard-main {
     margin-left: 280px;
-    padding-top: 0; /* Remove mobile header padding */
+    padding-top: 0 !important; /* Remove mobile header padding on desktop */
     width: calc(100% - 280px);
   }
   
@@ -76,12 +95,16 @@
     padding: 24px 32px;
   }
   
+  .dashboard-title {
+    text-align: center;
+  }
+  
   .dashboard-title h1 {
-    font-size: 28px;
+    font-size: 2.25rem;
   }
   
   .dashboard-title p {
-    font-size: 16px;
+    font-size: 1rem;
   }
   
   .dashboard-content {

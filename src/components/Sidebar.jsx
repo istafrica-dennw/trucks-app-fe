@@ -112,7 +112,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </div>
           </div>
           <div className="brand">
-            <h1 className="brand-name">TrucksApp</h1>
+            <h1 className="brand-name">UrwuriApp</h1>
             <p className="brand-subtitle">{isAdmin() ? 'Admin Panel' : 'User Panel'}</p>
           </div>
         </div>

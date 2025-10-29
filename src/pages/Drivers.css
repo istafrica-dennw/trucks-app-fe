@@ -10,12 +10,28 @@
   display: flex;
   flex-direction: column;
   margin-left: 0;
+  padding-top: 60px; /* Account for mobile header */
   transition: margin-left 0.3s ease;
+}
+
+/* Add extra padding on mobile for browser URL bar */
+@media (max-width: 768px) {
+  .drivers-main {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 60px); /* Header + safe area + browser URL bar */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* Bottom nav bar + safe area */
+    transition: padding-top 0.3s ease;
+  }
+  
+  /* Reduce top padding when header is hidden */
+  body.mobile-header-hidden .drivers-main {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 60px); /* Safe area + browser URL bar (header height removed) */
+  }
 }
 
 @media (min-width: 769px) {
   .drivers-main {
     margin-left: 280px;
+    padding-top: 0; /* Remove mobile header padding on desktop */
   }
 }
 
@@ -29,17 +45,25 @@
 
 /* Header */
 .drivers-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   margin-bottom: 24px;
+  gap: 16px;
 }
 
 .drivers-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1e293b;
   margin: 0;
+  text-align: center;
+  grid-column: 2;
+}
+
+.drivers-header .add-driver-btn {
+  grid-column: 3;
+  justify-self: end;
 }
 
 /* Add Driver Button */
@@ -680,12 +704,18 @@
   .drivers-header {
     flex-direction: column;
     gap: 16px;
-    align-items: stretch;
+    align-items: center;
   }
   
   .drivers-header h1 {
-    font-size: 1.5rem;
+    font-size: 2.25rem;
     text-align: center;
+    width: 100%;
+  }
+  
+  .drivers-header .add-driver-btn {
+    position: static;
+    align-self: center;
   }
   
   .drivers-actions {

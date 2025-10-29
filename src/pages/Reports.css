@@ -7,10 +7,41 @@
 
 .reports-main {
   flex: 1;
-  padding: 24px;
+  padding-left: 24px;
+  padding-right: 24px;
+  padding-bottom: 24px;
   margin-left: 0;
+  padding-top: 60px; /* Account for mobile header */
   width: 100%;
   max-width: none;
+  min-height: 100vh;
+}
+
+/* Add extra padding on mobile for browser URL bar */
+@media (max-width: 768px) {
+  .reports-main {
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 100px) !important; /* Header + safe area + browser URL bar (extra large for visibility) */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; /* Bottom nav bar + safe area */
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    transition: padding-top 0.3s ease;
+  }
+  
+  /* Reduce top padding when header is hidden */
+  body.mobile-header-hidden .reports-main {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 100px) !important; /* Safe area + browser URL bar (header height removed) */
+  }
+  
+  /* Ensure header has proper spacing and is visible */
+  .reports-header {
+    margin-top: 0;
+    margin-bottom: 32px;
+    padding-top: 0;
+  }
+  
+  .reports-header h1 {
+    font-size: 2.25rem;
+    margin-top: 0;
+  }
 }
 
 /* Desktop layout - account for sidebar width */
@@ -18,15 +49,25 @@
   .reports-main {
     width: calc(100% - 280px);
     margin-left: 280px;
+    padding-top: 24px; /* Content padding only on desktop */
+  }
+  
+  .reports-header {
+    text-align: center;
+  }
+  
+  .reports-header h1 {
+    font-size: 2.25rem;
   }
 }
 
 .reports-header {
   margin-bottom: 32px;
+  text-align: center;
 }
 
 .reports-header h1 {
-  font-size: 2rem;
+  font-size: 2.25rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 8px 0;
@@ -37,6 +78,8 @@
   font-size: 1rem;
   margin: 0;
 }
+
+/* Reports header base styles - margin-top is handled in the mobile query above */
 
 .reports-controls {
   background: white;
@@ -343,12 +386,15 @@
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  /* Note: padding-top and padding-bottom are set in the earlier mobile query above with !important */
   .reports-main {
-    padding: 16px;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    /* padding-top and padding-bottom must not be overridden here */
   }
 
   .reports-header h1 {
-    font-size: 1.5rem;
+    font-size: 2.25rem; /* Keep consistent with other pages */
   }
 
   .reports-controls {
@@ -357,6 +403,7 @@
 
   .report-content {
     padding: 16px;
+    margin-bottom: 0; /* Ensure content can reach the bottom padding */
   }
 
   .summary-grid {
