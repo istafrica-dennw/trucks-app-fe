@@ -880,6 +880,35 @@
   }
 }
 
+/* Password Confirmation Styles */
+.password-confirm-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-match-indicator {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.match-success {
+  color: #10b981;
+}
+
+.match-error {
+  color: #ef4444;
+}
+
+.password-mismatch {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;

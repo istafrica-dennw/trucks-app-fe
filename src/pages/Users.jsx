@@ -15,7 +15,8 @@ const Users = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
     username: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [updatingRoles, setUpdatingRoles] = useState({});
@@ -148,11 +149,23 @@ const Users = () => {
       return;
     }
 
+    if (newUser.password !== newUser.confirmPassword) {
+      setError('Passwords do not match');
+      setSubmitting(false);
+      return;
+    }
+
     try {
+      // Prepare user data for API (exclude confirmPassword)
+      const userData = {
+        username: newUser.username,
+        password: newUser.password
+      };
+
       const response = await fetch(createApiUrl('api/users'), {
         method: 'POST',
         headers: createAuthHeaders(token),
-        body: JSON.stringify(newUser)
+        body: JSON.stringify(userData)
       });
 
       if (!response.ok) {
@@ -169,7 +182,7 @@ const Users = () => {
       }
 
       // Reset form and close modal
-      setNewUser({ username: '', password: '' });
+      setNewUser({ username: '', password: '', confirmPassword: '' });
       setShowAddModal(false);
       
       // Refresh users list
@@ -184,7 +197,7 @@ const Users = () => {
   // Handle modal close
   const handleCloseModal = () => {
     setShowAddModal(false);
-    setNewUser({ username: '', password: '' });
+    setNewUser({ username: '', password: '', confirmPassword: '' });
     setError(null);
   };
 
@@ -528,6 +541,32 @@ const Users = () => {
                   placeholder="Enter password"
                   minLength="6"
                 />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm Password</label>
+                <div className="password-confirm-wrapper">
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={newUser.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Confirm password"
+                    minLength="6"
+                    className={newUser.confirmPassword && newUser.password !== newUser.confirmPassword ? 'password-mismatch' : ''}
+                  />
+                  {newUser.confirmPassword && (
+                    <div className="password-match-indicator">
+                      {newUser.password === newUser.confirmPassword ? (
+                        <span className="match-success">✓</span>
+                      ) : (
+                        <span className="match-error">✗</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {error && (
