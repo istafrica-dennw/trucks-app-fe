@@ -6,7 +6,7 @@ import MobileHeader from '../components/MobileHeader';
 import './Drivers.css';
 
 const Drivers = () => {
-  const { token } = useAuth();
+  const { token, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);

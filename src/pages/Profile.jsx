@@ -12,8 +12,7 @@ const Profile = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [formData, setFormData] = useState({
-    email: user?.email || '',
-    phone: user?.phone || ''
+    username: user?.username || ''
   });
 
   const toggleSidebar = () => {
@@ -56,30 +55,21 @@ const Profile = () => {
 
   const handleCancel = () => {
     setFormData({
-      email: user?.email || '',
-      phone: user?.phone || ''
+      username: user?.username || ''
     });
     setIsEditing(false);
     setError(null);
     setSuccess(null);
   };
 
-  const getDisplayName = (email) => {
-    if (!email) return 'User';
-    const namePart = email.split('@')[0];
-    return namePart.split('.').map(part => 
-      part.charAt(0).toUpperCase() + part.slice(1)
-    ).join(' ');
+  const getDisplayName = (username) => {
+    if (!username) return 'User';
+    return username.charAt(0).toUpperCase() + username.slice(1);
   };
 
-  const getUserInitials = (email) => {
-    if (!email) return 'U';
-    const namePart = email.split('@')[0];
-    const parts = namePart.split('.');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return namePart.substring(0, 2).toUpperCase();
+  const getUserInitials = (username) => {
+    if (!username) return 'U';
+    return username.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -97,11 +87,11 @@ const Profile = () => {
           <div className="profile-card">
             <div className="profile-avatar-section">
               <div className="profile-avatar">
-                {getUserInitials(user?.email)}
+                {getUserInitials(user?.username)}
               </div>
               <div className="profile-info">
-                <h2>{getDisplayName(user?.email)}</h2>
-                <p className="profile-email">{user?.email}</p>
+                <h2>{getDisplayName(user?.username)}</h2>
+                <p className="profile-username">@{user?.username}</p>
                 <span className={`profile-role ${user?.role}`}>
                   {user?.role}
                 </span>
@@ -122,28 +112,17 @@ const Profile = () => {
 
             <form onSubmit={handleSubmit} className="profile-form">
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   required
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="+1234567890"
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
                 />
               </div>
 
@@ -194,12 +173,6 @@ const Profile = () => {
                   <span className="detail-label">Status:</span>
                   <span className={`detail-value status-badge ${user?.isActive ? 'active' : 'inactive'}`}>
                     {user?.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-label">Email Verified:</span>
-                  <span className={`detail-value status-badge ${user?.emailVerified ? 'verified' : 'unverified'}`}>
-                    {user?.emailVerified ? 'Verified' : 'Unverified'}
                   </span>
                 </div>
                 <div className="detail-item">

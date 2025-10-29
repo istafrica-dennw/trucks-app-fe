@@ -101,6 +101,40 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } 
       />
+      
+      {/* User routes - accessible to all authenticated users */}
+      <Route 
+        path="/trucks" 
+        element={
+          <ProtectedRoute>
+            <Trucks />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/drivers" 
+        element={
+          <ProtectedRoute>
+            <Drivers />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/journeys" 
+        element={
+          <ProtectedRoute>
+            <Journeys />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/reports" 
+        element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/admin/profile" 
         element={

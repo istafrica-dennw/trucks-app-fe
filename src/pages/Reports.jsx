@@ -337,7 +337,7 @@ const Reports = () => {
           <div className="report-content">
             {reportData.summary && renderReportSummary(reportData.summary)}
             {reportData.breakdown && renderBreakdown(reportData.breakdown)}
-            {reportData.overall && renderReportSummary({ summary: reportData.overall })}
+            {reportData.overall && renderReportSummary(reportData.overall)}
           </div>
         )}
       </div>

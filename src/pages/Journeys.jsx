@@ -6,7 +6,7 @@ import MobileHeader from '../components/MobileHeader';
 import './Journeys.css';
 
 const Journeys = () => {
-  const { token, user } = useAuth();
+  const { token, user, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [journeys, setJourneys] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -1173,6 +1173,19 @@ const Journeys = () => {
                   rows="3"
                 />
                 {renderFieldError('notes')}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="date">Date *</label>
+                <input
+                  type="date"
+                  id="date"
+                  name="date"
+                  value={newJourney.date}
+                  onChange={handleInputChange}
+                  required
+                />
+                {renderFieldError('date')}
               </div>
 
               <div className="modal-actions">

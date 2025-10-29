@@ -29,7 +29,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/dashboard'
+      path: isAdmin() ? '/admin/dashboard' : '/dashboard',
+      adminOnly: false
     },
     {
       id: 'users',
@@ -39,7 +40,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7ZM12 13C15.3137 13 18 15.6863 18 19V21H6V19C6 15.6863 8.68629 13 12 13ZM20 7C20 10.866 16.866 14 13 14C9.13401 14 6 10.866 6 7C6 3.13401 9.13401 0 13 0C16.866 0 20 3.13401 20 7ZM13 12C15.7614 12 18 9.76142 18 7C18 4.23858 15.7614 2 13 2C10.2386 2 8 4.23858 8 7C8 9.76142 10.2386 12 13 12ZM20 19V21H14V19C14 16.7909 12.2091 15 10 15H16C18.2091 15 20 16.7909 20 19Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/users'
+      path: '/admin/users',
+      adminOnly: true
     },
     {
       id: 'trucks',
@@ -49,7 +51,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M20 8H17V4H3C1.9 4 1 4.9 1 6V17H3C3 18.66 4.34 20 6 20S9 18.66 9 17H15C15 18.66 16.34 20 18 20S21 18.66 21 17H23V12L20 8ZM6 18.5C5.17 18.5 4.5 17.83 4.5 17S5.17 15.5 6 15.5 7.5 16.17 7.5 17 6.83 18.5 6 18.5ZM18 18.5C17.17 18.5 16.5 17.83 16.5 17S17.17 15.5 18 15.5 19.5 16.17 19.5 17 18.83 18.5 18 18.5ZM17 12V10H19.5L21.46 12H17Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/trucks'
+      path: isAdmin() ? '/admin/trucks' : '/trucks',
+      adminOnly: false
     },
     {
       id: 'drivers',
@@ -59,7 +62,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/drivers'
+      path: isAdmin() ? '/admin/drivers' : '/drivers',
+      adminOnly: false
     },
     {
       id: 'journeys',
@@ -69,7 +73,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22S19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/journeys'
+      path: isAdmin() ? '/admin/journeys' : '/journeys',
+      adminOnly: false
     },
     {
       id: 'reports',
@@ -79,9 +84,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM9 17H7V10H9V17ZM13 17H11V7H13V17ZM17 17H15V13H17V17Z" fill="currentColor"/>
         </svg>
       ),
-      path: '/admin/reports'
+      path: isAdmin() ? '/admin/reports' : '/reports',
+      adminOnly: false
     }
   ];
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin());
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -104,7 +113,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
           <div className="brand">
             <h1 className="brand-name">TrucksApp</h1>
-            <p className="brand-subtitle">Admin Panel</p>
+            <p className="brand-subtitle">{isAdmin() ? 'Admin Panel' : 'User Panel'}</p>
           </div>
         </div>
 
@@ -112,7 +121,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       <nav className="sidebar-nav">
         <h3 className="nav-section-title">Navigation</h3>
         <ul className="nav-menu">
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <li key={item.id} className="nav-item">
               <button
                 className={`nav-link ${isActive(item.path) ? 'active' : ''}`}

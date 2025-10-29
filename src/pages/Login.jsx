@@ -91,14 +91,14 @@ const Login = () => {
           )}
 
           <div className="form-group">
-            <label htmlFor="login" className="form-label">Email</label>
+            <label htmlFor="login" className="form-label">Username</label>
             <input
               type="text"
               id="login"
               name="login"
               value={formData.login}
               onChange={handleInputChange}
-              placeholder="you@company.com"
+              placeholder="Enter your username"
               className="form-input"
               required
             />

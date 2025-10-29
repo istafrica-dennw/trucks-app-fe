@@ -14,8 +14,7 @@ const Users = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({
-    email: '',
-    phone: '',
+    username: '',
     password: ''
   });
   const [submitting, setSubmitting] = useState(false);
@@ -90,27 +89,15 @@ const Users = () => {
   };
 
   // Get user initials for avatar
-  const getUserInitials = (email) => {
-    if (!email) return 'U';
-    // Extract the part before @ and use first two characters
-    const namePart = email.split('@')[0];
-    return namePart
-      .split(/[._-]/) // Split on common separators
-      .map(part => part.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const getUserInitials = (username) => {
+    if (!username) return 'U';
+    return username.substring(0, 2).toUpperCase();
   };
 
-  // Get display name from email
-  const getDisplayName = (email) => {
-    if (!email) return 'Unknown User';
-    const namePart = email.split('@')[0];
-    // Convert to title case and replace separators with spaces
-    return namePart
-      .split(/[._-]/)
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(' ');
+  // Get display name from username
+  const getDisplayName = (username) => {
+    if (!username) return 'Unknown User';
+    return username.charAt(0).toUpperCase() + username.slice(1);
   };
 
   // Format last login date
@@ -149,22 +136,14 @@ const Users = () => {
     setError(null);
 
     // Basic client-side validation
-    if (!newUser.email || !newUser.phone || !newUser.password) {
-      setError('All fields are required');
+    if (!newUser.username || !newUser.password) {
+      setError('Username and password are required');
       setSubmitting(false);
       return;
     }
 
     if (newUser.password.length < 6) {
       setError('Password must be at least 6 characters long');
-      setSubmitting(false);
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newUser.email)) {
-      setError('Please enter a valid email address');
       setSubmitting(false);
       return;
     }
@@ -190,7 +169,7 @@ const Users = () => {
       }
 
       // Reset form and close modal
-      setNewUser({ email: '', phone: '', password: '' });
+      setNewUser({ username: '', password: '' });
       setShowAddModal(false);
       
       // Refresh users list
@@ -205,7 +184,7 @@ const Users = () => {
   // Handle modal close
   const handleCloseModal = () => {
     setShowAddModal(false);
-    setNewUser({ email: '', phone: '', password: '' });
+    setNewUser({ username: '', password: '' });
     setError(null);
   };
 
@@ -242,14 +221,14 @@ const Users = () => {
   };
 
   // Handle delete user click (show confirmation modal)
-  const handleDeleteUserClick = (userId, userEmail) => {
+  const handleDeleteUserClick = (userId, username) => {
     // Prevent admin from deleting themselves
     if (userId === user?.id) {
       setError('You cannot delete your own account');
       return;
     }
 
-    setUserToDelete({ id: userId, email: userEmail });
+    setUserToDelete({ id: userId, username: username });
     setShowDeleteModal(true);
   };
 
@@ -410,12 +389,12 @@ const Users = () => {
               users.map((userData) => (
                 <div key={userData._id} className={`user-card ${userData._id === user?.id ? 'current-user' : ''}`}>
                   <div className="user-avatar">
-                    {getUserInitials(userData.email)}
+                    {getUserInitials(userData.username)}
                   </div>
                   
                   <div className="user-info">
-                    <h3 className="user-name">{getDisplayName(userData.email)}</h3>
-                    <p className="user-email">{userData.email}</p>
+                    <h3 className="user-name">{getDisplayName(userData.username)}</h3>
+                    <p className="user-username">@{userData.username}</p>
                   </div>
                   
                   <div className="user-meta">
@@ -461,7 +440,7 @@ const Users = () => {
                       </button>
                       
                       <button
-                        onClick={() => handleDeleteUserClick(userData._id, userData.email)}
+                        onClick={() => handleDeleteUserClick(userData._id, userData.username)}
                         disabled={deletingUsers[userData._id] || userData._id === user?.id}
                         className="delete-user-btn"
                         title={userData._id === user?.id ? "You cannot delete your own account" : "Delete user"}
@@ -523,28 +502,17 @@ const Users = () => {
             
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="username">Username</label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={newUser.email}
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={newUser.username}
                   onChange={handleInputChange}
                   required
-                  placeholder="user@example.com"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={newUser.phone}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="+1234567890"
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Username can only contain letters, numbers, and underscores"
+                  placeholder="Enter username"
                 />
               </div>
               
@@ -597,10 +565,10 @@ const Users = () => {
             <div className="user-details-content">
               <div className="user-details-avatar">
                 <div className="user-avatar-large">
-                  {getUserInitials(selectedUser.email)}
+                  {getUserInitials(selectedUser.username)}
                 </div>
-                <h3>{getDisplayName(selectedUser.email)}</h3>
-                <p className="user-email-detail">{selectedUser.email}</p>
+                <h3>{getDisplayName(selectedUser.username)}</h3>
+                <p className="user-username-detail">@{selectedUser.username}</p>
               </div>
               
               <div className="user-details-info">
@@ -629,10 +597,8 @@ const Users = () => {
                 </div>
                 
                 <div className="detail-row">
-                  <span className="detail-label">Email Verified:</span>
-                  <span className={`detail-value status-badge ${selectedUser.emailVerified ? 'verified' : 'unverified'}`}>
-                    {selectedUser.emailVerified ? 'Verified' : 'Unverified'}
-                  </span>
+                  <span className="detail-label">Username:</span>
+                  <span className="detail-value">@{selectedUser.username}</span>
                 </div>
                 
                 <div className="detail-row">
@@ -696,7 +662,7 @@ const Users = () => {
               
               <h3>Are you sure you want to delete this user?</h3>
               <p className="delete-user-info">
-                <strong>Email:</strong> {userToDelete.email}
+                <strong>Username:</strong> @{userToDelete.username}
               </p>
               <p className="delete-warning-text">
                 This action cannot be undone. The user will be permanently removed from the system.
