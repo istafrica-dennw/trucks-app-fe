@@ -49,7 +49,8 @@ const Journeys = () => {
   // Installment form
   const [newInstallment, setNewInstallment] = useState({
     amount: '',
-    note: ''
+    date: '',
+    attachment: null
   });
 
   // Helpers for installments
@@ -86,7 +87,7 @@ const Journeys = () => {
         ...prev,
         pay: {
           ...prev.pay,
-          installments: [...(prev.pay.installments || []), { amount: '', note: '' }]
+          installments: [...(prev.pay.installments || []), { amount: '' }]
         }
       }));
     } else if (showEditModal && selectedJourney) {
@@ -94,7 +95,7 @@ const Journeys = () => {
         ...prev,
         pay: {
           ...prev.pay,
-          installments: [...(prev.pay.installments || []), { amount: '', note: '' }]
+          installments: [...(prev.pay.installments || []), { amount: '' }]
         }
       }));
     }
@@ -325,7 +326,7 @@ const Journeys = () => {
     } catch (err) {
       setSelectedJourney(journey); // fallback
     }
-    setNewInstallment({ amount: '', note: '' });
+    setNewInstallment({ amount: '', date: '', attachment: null });
     setError(null);
     setFieldErrors({});
     setShowInstallmentModal(true);
@@ -469,25 +470,65 @@ const Journeys = () => {
     setFieldErrors({});
 
     try {
-      // Prepare journey data
-      const journeyData = {
-        ...newJourney,
-        pay: {
-          ...newJourney.pay,
-          totalAmount: parseFloat(newJourney.pay.totalAmount),
-          installments: newJourney.pay.paidOption === 'full' ? [] : newJourney.pay.installments
-        },
-        expenses: newJourney.expenses.map(expense => ({
-          ...expense,
-          amount: parseFloat(expense.amount)
-        }))
-      };
+      // Check if we need to upload a file for full payment
+      const hasPaymentProof = newJourney.pay.paidOption === 'full' && newJourney.pay.paymentProofFile;
+      
+      let response;
+      
+      if (hasPaymentProof) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('driver', newJourney.driver);
+        formData.append('truck', newJourney.truck);
+        formData.append('departureCity', newJourney.departureCity);
+        formData.append('destinationCity', newJourney.destinationCity);
+        formData.append('cargo', newJourney.cargo);
+        formData.append('customer', newJourney.customer);
+        formData.append('notes', newJourney.notes || '');
+        formData.append('status', newJourney.status);
+        formData.append('date', newJourney.date);
+        formData.append('pay[totalAmount]', parseFloat(newJourney.pay.totalAmount));
+        formData.append('pay[paidOption]', newJourney.pay.paidOption);
+        formData.append('pay[attachment]', newJourney.pay.paymentProofFile); // Field name for full payment proof
+        
+        // Add expenses
+        newJourney.expenses.forEach((expense, index) => {
+          formData.append(`expenses[${index}][title]`, expense.title);
+          formData.append(`expenses[${index}][amount]`, parseFloat(expense.amount));
+          if (expense.note) {
+            formData.append(`expenses[${index}][note]`, expense.note);
+          }
+        });
 
-      const response = await fetch(createApiUrl('api/drives'), {
-        method: 'POST',
-        headers: createAuthHeaders(token),
-        body: JSON.stringify(journeyData)
-      });
+        const headers = createAuthHeaders(token);
+        delete headers['Content-Type']; // Let browser set Content-Type with boundary
+
+        response = await fetch(createApiUrl('api/drives'), {
+          method: 'POST',
+          headers: headers,
+          body: formData
+        });
+      } else {
+        // Use JSON for regular submission
+        const journeyData = {
+          ...newJourney,
+          pay: {
+            ...newJourney.pay,
+            totalAmount: parseFloat(newJourney.pay.totalAmount),
+            installments: newJourney.pay.paidOption === 'full' ? [] : newJourney.pay.installments
+          },
+          expenses: newJourney.expenses.map(expense => ({
+            ...expense,
+            amount: parseFloat(expense.amount)
+          }))
+        };
+
+        response = await fetch(createApiUrl('api/drives'), {
+          method: 'POST',
+          headers: createAuthHeaders(token),
+          body: JSON.stringify(journeyData)
+        });
+      }
 
       const data = await response.json();
 
@@ -519,7 +560,8 @@ const Journeys = () => {
         pay: {
           totalAmount: '',
           paidOption: 'full',
-          installments: []
+          installments: [],
+          paymentProofFile: null
         },
         notes: '',
         status: 'started',
@@ -545,38 +587,120 @@ const Journeys = () => {
     setFieldErrors({});
 
     try {
-      // Prepare journey data (only allowed fields; convert populated objects to IDs)
-      const journeyData = {
-        driver: selectedJourney.driver?._id || selectedJourney.driver,
-        truck: selectedJourney.truck?._id || selectedJourney.truck,
-        departureCity: selectedJourney.departureCity,
-        destinationCity: selectedJourney.destinationCity,
-        cargo: selectedJourney.cargo,
-        customer: selectedJourney.customer,
-        notes: selectedJourney.notes,
-        status: selectedJourney.status,
-        date: selectedJourney.date,
-        expenses: (selectedJourney.expenses || []).map(expense => ({
-          title: expense.title,
-          amount: parseFloat(expense.amount),
-          note: expense.note
-        })),
-        pay: {
-          totalAmount: parseFloat(selectedJourney.pay?.totalAmount ?? 0),
-          paidOption: selectedJourney.pay?.paidOption || 'full',
-          installments: (selectedJourney.pay?.paidOption === 'full') ? [] : ((selectedJourney.pay?.installments || []).map(inst => ({
-            amount: parseFloat(inst.amount),
-            note: inst.note,
-            date: inst.date
-          })))
-        }
-      };
+      // Check if we need to upload a file for full payment
+      const hasFullPaymentProof = selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.paymentProofFile;
+      
+      // Separate new installments with files from existing ones
+      const newInstallmentsWithFiles = [];
+      const existingInstallments = [];
+      
+      if (selectedJourney.pay?.paidOption === 'installment' && selectedJourney.pay?.installments) {
+        selectedJourney.pay.installments.forEach((inst, index) => {
+          if (inst.attachmentFile) {
+            // This is a NEW installment with a file - it will be added via the installment API
+            // Note: We can't include it in the journey update because we need FormData
+            newInstallmentsWithFiles.push({ index, installment: inst });
+          } else {
+            // Existing installment - preserve full structure including attachment
+            const installmentData = {
+              amount: parseFloat(inst.amount),
+              date: inst.date || new Date()
+            };
+            
+            // Always preserve attachment if it exists (required field in schema)
+            // The attachment must have all required fields
+            if (inst.attachment && inst.attachment.filename) {
+              installmentData.attachment = {
+                filename: inst.attachment.filename,
+                path: inst.attachment.path,
+                mimetype: inst.attachment.mimetype,
+                size: inst.attachment.size
+              };
+            } else {
+              // If attachment data is missing, log it for debugging
+              console.warn('Installment missing attachment data:', { inst, index });
+            }
+            
+            existingInstallments.push(installmentData);
+          }
+        });
+      }
 
-      const response = await fetch(createApiUrl(`api/drives/${selectedJourney._id}`), {
-        method: 'PUT',
-        headers: createAuthHeaders(token),
-        body: JSON.stringify(journeyData)
-      });
+      let response;
+      
+      if (hasFullPaymentProof) {
+        // Use FormData for full payment with file upload
+        const formData = new FormData();
+        formData.append('driver', selectedJourney.driver?._id || selectedJourney.driver);
+        formData.append('truck', selectedJourney.truck?._id || selectedJourney.truck);
+        formData.append('departureCity', selectedJourney.departureCity);
+        formData.append('destinationCity', selectedJourney.destinationCity);
+        formData.append('cargo', selectedJourney.cargo);
+        formData.append('customer', selectedJourney.customer);
+        formData.append('notes', selectedJourney.notes || '');
+        formData.append('status', selectedJourney.status);
+        formData.append('date', selectedJourney.date);
+        formData.append('pay[totalAmount]', parseFloat(selectedJourney.pay?.totalAmount ?? 0));
+        formData.append('pay[paidOption]', selectedJourney.pay?.paidOption || 'full');
+        formData.append('pay[attachment]', selectedJourney.pay.paymentProofFile);
+        
+        // Add expenses
+        (selectedJourney.expenses || []).forEach((expense, index) => {
+          formData.append(`expenses[${index}][title]`, expense.title);
+          formData.append(`expenses[${index}][amount]`, parseFloat(expense.amount));
+          if (expense.note) {
+            formData.append(`expenses[${index}][note]`, expense.note);
+          }
+        });
+
+        const headers = createAuthHeaders(token);
+        delete headers['Content-Type']; // Let browser set Content-Type with boundary
+
+        response = await fetch(createApiUrl(`api/drives/${selectedJourney._id}`), {
+          method: 'PUT',
+          headers: headers,
+          body: formData
+        });
+      } else {
+        // Prepare journey data (only allowed fields; convert populated objects to IDs)
+        const journeyData = {
+          driver: selectedJourney.driver?._id || selectedJourney.driver,
+          truck: selectedJourney.truck?._id || selectedJourney.truck,
+          departureCity: selectedJourney.departureCity,
+          destinationCity: selectedJourney.destinationCity,
+          cargo: selectedJourney.cargo,
+          customer: selectedJourney.customer,
+          notes: selectedJourney.notes,
+          status: selectedJourney.status,
+          date: selectedJourney.date,
+          expenses: (selectedJourney.expenses || []).map(expense => ({
+            title: expense.title,
+            amount: parseFloat(expense.amount),
+            note: expense.note
+          })),
+          pay: {
+            totalAmount: parseFloat(selectedJourney.pay?.totalAmount ?? 0),
+            paidOption: selectedJourney.pay?.paidOption || 'full',
+            installments: selectedJourney.pay?.paidOption === 'full' ? [] : existingInstallments
+          }
+        };
+        
+        // Preserve existing full payment attachment if no new file is provided
+        if (selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.attachment && !selectedJourney.pay?.paymentProofFile) {
+          journeyData.pay.attachment = {
+            filename: selectedJourney.pay.attachment.filename,
+            path: selectedJourney.pay.attachment.path,
+            mimetype: selectedJourney.pay.attachment.mimetype,
+            size: selectedJourney.pay.attachment.size
+          };
+        }
+
+        response = await fetch(createApiUrl(`api/drives/${selectedJourney._id}`), {
+          method: 'PUT',
+          headers: createAuthHeaders(token),
+          body: JSON.stringify(journeyData)
+        });
+      }
 
       const data = await response.json();
 
@@ -593,6 +717,38 @@ const Journeys = () => {
           setError(data.message || 'Failed to update journey');
         }
         return;
+      }
+
+      // If there are new installments with files, add them separately via the installment API
+      if (newInstallmentsWithFiles.length > 0) {
+        for (const { installment } of newInstallmentsWithFiles) {
+          try {
+            const formData = new FormData();
+            formData.append('amount', installment.amount);
+            if (installment.date) {
+              formData.append('date', installment.date);
+            }
+            formData.append('attachment', installment.attachmentFile);
+
+            const headers = createAuthHeaders(token);
+            delete headers['Content-Type'];
+
+            const installResponse = await fetch(createApiUrl(`api/drives/${selectedJourney._id}/installment`), {
+              method: 'POST',
+              headers: headers,
+              body: formData
+            });
+
+            if (!installResponse.ok) {
+              const installData = await installResponse.json();
+              throw new Error(installData.message || 'Failed to add installment with attachment');
+            }
+          } catch (err) {
+            console.error('Error adding installment with attachment', err);
+            setError(`Failed to add one or more installments: ${err.message}`);
+            return;
+          }
+        }
       }
 
       // Success
@@ -618,15 +774,30 @@ const Journeys = () => {
     setFieldErrors({});
 
     try {
-      const installmentData = {
-        amount: parseFloat(newInstallment.amount),
-        note: newInstallment.note
-      };
+      // Validate file is attached
+      if (!newInstallment.attachment) {
+        setError('Proof of payment attachment is required');
+        setSubmitting(false);
+        return;
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('amount', newInstallment.amount);
+      if (newInstallment.date) {
+        formData.append('date', newInstallment.date);
+      }
+      formData.append('attachment', newInstallment.attachment);
+
+      // Get token from headers
+      const headers = createAuthHeaders(token);
+      // Remove Content-Type header to let browser set it with boundary for FormData
+      delete headers['Content-Type'];
 
       const response = await fetch(createApiUrl(`api/drives/${selectedJourney._id}/installment`), {
         method: 'POST',
-        headers: createAuthHeaders(token),
-        body: JSON.stringify(installmentData)
+        headers: headers,
+        body: formData
       });
 
       const data = await response.json();
@@ -649,14 +820,38 @@ const Journeys = () => {
       // Success
       setShowInstallmentModal(false);
       setSelectedJourney(null);
-      setNewInstallment({ amount: '', note: '' });
+      setNewInstallment({ amount: '', date: '', attachment: null });
       
       // Refresh journeys list
       await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
     } catch (err) {
-      setError('Failed to add installment');
+      setError(err.message || 'Failed to add installment');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Handle file input change
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+      
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size exceeds 10MB limit.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+      
+      setNewInstallment(prev => ({ ...prev, attachment: file }));
+      setError(null);
     }
   };
 
@@ -1061,6 +1256,50 @@ const Journeys = () => {
                 </div>
               </div>
 
+              {/* Payment Proof Section (only when paidOption is full) */}
+              {newJourney.pay.paidOption === 'full' && (
+                <div className="form-group">
+                  <label htmlFor="paymentProof">Proof of Payment</label>
+                  <input
+                    type="file"
+                    id="paymentProof"
+                    name="paymentProof"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                        if (!allowedTypes.includes(file.type)) {
+                          setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+                          e.target.value = '';
+                          return;
+                        }
+                        if (file.size > 10 * 1024 * 1024) {
+                          setError('File size exceeds 10MB limit.');
+                          e.target.value = '';
+                          return;
+                        }
+                        setNewJourney(prev => ({
+                          ...prev,
+                          pay: {
+                            ...prev.pay,
+                            paymentProofFile: file
+                          }
+                        }));
+                        setError(null);
+                      }
+                    }}
+                  />
+                  <small className="form-help">Upload an image (JPEG, PNG, GIF, WEBP) or PDF file (max 10MB)</small>
+                  {newJourney.pay.paymentProofFile && (
+                    <div className="file-preview">
+                      <span>Selected: {newJourney.pay.paymentProofFile.name}</span>
+                      <span className="file-size">({(newJourney.pay.paymentProofFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Installments Section (only when paidOption is installment) */}
               {newJourney.pay.paidOption === 'installment' && (
                 <div className="expenses-section">
@@ -1090,13 +1329,6 @@ const Journeys = () => {
                         step="0.01"
                         min="0"
                         className="expense-amount"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Note (optional)"
-                        value={inst.note}
-                        onChange={(e) => handleInstallmentChange(index, 'note', e.target.value)}
-                        className="expense-note"
                       />
                       <button
                         type="button"
@@ -1221,6 +1453,61 @@ const Journeys = () => {
                 <p><strong>Total Amount:</strong> {formatCurrency(selectedJourney.pay.totalAmount)}</p>
                 <p><strong>Paid So Far:</strong> {formatCurrency(selectedJourney.totalPaid || 0)}</p>
                 <p><strong>Remaining:</strong> {formatCurrency(selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0))}</p>
+                {selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.attachment && (
+                  <p>
+                    <strong>Proof of Payment:</strong>{' '}
+                    <a
+                      href={createApiUrl(`api/drives/${selectedJourney._id}/payment-proof`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          const url = createApiUrl(`api/drives/${selectedJourney._id}/payment-proof`);
+                          const response = await fetch(url, {
+                            headers: createAuthHeaders(token)
+                          });
+
+                          if (!response.ok) {
+                            try {
+                              const errorData = await response.json();
+                              setError(errorData.message || 'Failed to download payment proof');
+                            } catch {
+                              setError('Failed to download payment proof');
+                            }
+                            return;
+                          }
+
+                          const contentType = response.headers.get('content-type');
+                          if (contentType && contentType.includes('application/json')) {
+                            const errorData = await response.json();
+                            setError(errorData.message || 'Failed to download payment proof');
+                            return;
+                          }
+
+                          const blob = await response.blob();
+                          const blobUrl = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = blobUrl;
+                          link.setAttribute('download', selectedJourney.pay.attachment.filename || 'payment-proof');
+                          link.setAttribute('type', blob.type || selectedJourney.pay.attachment.mimetype);
+                          document.body.appendChild(link);
+                          link.click();
+                          setTimeout(() => {
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(blobUrl);
+                          }, 100);
+                        } catch (err) {
+                          console.error('Error downloading payment proof:', err);
+                          setError('Failed to download payment proof: ' + err.message);
+                        }
+                      }}
+                    >
+                      📎 View Proof
+                    </a>
+                  </p>
+                )}
               </div>
 
               <div className="form-group">
@@ -1240,16 +1527,35 @@ const Journeys = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="note">Note</label>
+                <label htmlFor="date">Payment Date (Optional)</label>
                 <input
-                  type="text"
-                  id="note"
-                  name="note"
-                  value={newInstallment.note}
+                  type="date"
+                  id="date"
+                  name="date"
+                  value={newInstallment.date}
                   onChange={handleInputChange}
-                  placeholder="Payment note (optional)"
                 />
-                {renderFieldError('note')}
+                {renderFieldError('date')}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="attachment">Proof of Payment *</label>
+                <input
+                  type="file"
+                  id="attachment"
+                  name="attachment"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                  onChange={handleFileChange}
+                  required
+                />
+                <small className="form-help">Upload an image (JPEG, PNG, GIF, WEBP) or PDF file (max 10MB)</small>
+                {newInstallment.attachment && (
+                  <div className="file-preview">
+                    <span>Selected: {newInstallment.attachment.name}</span>
+                    <span className="file-size">({(newInstallment.attachment.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  </div>
+                )}
+                {renderFieldError('attachment')}
               </div>
 
               <div className="modal-actions">
@@ -1407,6 +1713,55 @@ const Journeys = () => {
                 </div>
               </div>
 
+              {/* Payment Proof Section for Full Payment (Edit Mode) */}
+              {selectedJourney.pay?.paidOption === 'full' && (
+                <div className="form-group">
+                  <label htmlFor="edit-paymentProof">Proof of Payment</label>
+                  <input
+                    type="file"
+                    id="edit-paymentProof"
+                    name="edit-paymentProof"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                        if (!allowedTypes.includes(file.type)) {
+                          setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+                          e.target.value = '';
+                          return;
+                        }
+                        if (file.size > 10 * 1024 * 1024) {
+                          setError('File size exceeds 10MB limit.');
+                          e.target.value = '';
+                          return;
+                        }
+                        setSelectedJourney(prev => ({
+                          ...prev,
+                          pay: {
+                            ...prev.pay,
+                            paymentProofFile: file
+                          }
+                        }));
+                        setError(null);
+                      }
+                    }}
+                  />
+                  <small className="form-help">Upload an image (JPEG, PNG, GIF, WEBP) or PDF file (max 10MB). Leave empty to keep existing proof.</small>
+                  {selectedJourney.pay?.paymentProofFile && (
+                    <div className="file-preview">
+                      <span>New file: {selectedJourney.pay.paymentProofFile.name}</span>
+                      <span className="file-size">({(selectedJourney.pay.paymentProofFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                  )}
+                  {selectedJourney.pay?.attachment && !selectedJourney.pay?.paymentProofFile && (
+                    <div className="file-preview" style={{ color: '#059669' }}>
+                      <span>Current: {selectedJourney.pay.attachment.filename}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="edit-status">Status</label>
@@ -1442,23 +1797,51 @@ const Journeys = () => {
                   )}
 
                   {(selectedJourney.pay?.installments || []).map((inst, index) => (
-                    <div key={index} className="expense-row">
+                    <div key={index} className="expense-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <input
                         type="number"
                         placeholder="Amount"
-                        value={inst.amount}
+                        value={inst.amount || ''}
                         onChange={(e) => handleInstallmentChange(index, 'amount', e.target.value)}
                         step="0.01"
                         min="0"
                         className="expense-amount"
+                        style={{ flex: '1', minWidth: '100px' }}
                       />
                       <input
-                        type="text"
-                        placeholder="Note (optional)"
-                        value={inst.note}
-                        onChange={(e) => handleInstallmentChange(index, 'note', e.target.value)}
-                        className="expense-note"
+                        type="file"
+                        id={`installment-attachment-${index}`}
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                            if (!allowedTypes.includes(file.type)) {
+                              setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+                              e.target.value = '';
+                              return;
+                            }
+                            if (file.size > 10 * 1024 * 1024) {
+                              setError('File size exceeds 10MB limit.');
+                              e.target.value = '';
+                              return;
+                            }
+                            handleInstallmentChange(index, 'attachmentFile', file);
+                            setError(null);
+                          }
+                        }}
+                        style={{ flex: '1', minWidth: '150px', fontSize: '0.875rem' }}
                       />
+                      {inst.attachment && !inst.attachmentFile && (
+                        <span style={{ padding: '8px', color: '#059669', fontSize: '0.875rem' }}>
+                          📎 {inst.attachment.filename}
+                        </span>
+                      )}
+                      {inst.attachmentFile && (
+                        <span style={{ padding: '8px', color: '#3b82f6', fontSize: '0.875rem' }}>
+                          📎 {inst.attachmentFile.name} ({(inst.attachmentFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeInstallmentRow(index)}
@@ -1580,13 +1963,166 @@ const Journeys = () => {
                 </div>
               )}
 
+              {selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.attachment && (
+                <div style={{ marginTop: 16 }}>
+                  <h3 style={{ margin: '0 0 8px 0' }}>Payment Proof</h3>
+                  <div className="detail-row">
+                    <span className="detail-label">Proof of Payment:</span>
+                    <span className="detail-value">
+                      <a
+                        href={createApiUrl(`api/drives/${selectedJourney._id}/payment-proof`)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#3b82f6', textDecoration: 'underline' }}
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          try {
+                            const url = createApiUrl(`api/drives/${selectedJourney._id}/payment-proof`);
+                            const response = await fetch(url, {
+                              headers: createAuthHeaders(token)
+                            });
+
+                            if (!response.ok) {
+                              try {
+                                const errorData = await response.json();
+                                setError(errorData.message || 'Failed to download payment proof');
+                              } catch {
+                                setError('Failed to download payment proof');
+                              }
+                              return;
+                            }
+
+                            const contentType = response.headers.get('content-type');
+                            if (contentType && contentType.includes('application/json')) {
+                              const errorData = await response.json();
+                              setError(errorData.message || 'Failed to download payment proof');
+                              return;
+                            }
+
+                            const blob = await response.blob();
+                            const blobUrl = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = blobUrl;
+                            link.setAttribute('download', selectedJourney.pay.attachment.filename || 'payment-proof');
+                            link.setAttribute('type', blob.type || selectedJourney.pay.attachment.mimetype);
+                            document.body.appendChild(link);
+                            link.click();
+                            setTimeout(() => {
+                              document.body.removeChild(link);
+                              window.URL.revokeObjectURL(blobUrl);
+                            }, 100);
+                          } catch (err) {
+                            console.error('Error downloading payment proof:', err);
+                            setError('Failed to download payment proof: ' + err.message);
+                          }
+                        }}
+                      >
+                        📎 View Proof
+                      </a>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {(selectedJourney.pay?.installments || []).length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   <h3 style={{ margin: '0 0 8px 0' }}>Installments</h3>
                   {(selectedJourney.pay?.installments || []).map((inst, i) => (
                     <div key={i} className="detail-row">
                       <span className="detail-label">{formatDate(inst.date)}</span>
-                      <span className="detail-value">{formatCurrency(inst.amount)}{inst.note ? ` — ${inst.note}` : ''}</span>
+                      <span className="detail-value">
+                        {formatCurrency(inst.amount)}
+                        {inst.attachment && (
+                          <a
+                            href={createApiUrl(`api/drives/${selectedJourney._id}/installment/${i}/proof`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ marginLeft: '8px', color: '#3b82f6', textDecoration: 'underline' }}
+                            onClick={async (e) => {
+                              // Add token to download request
+                              e.preventDefault();
+                              try {
+                                // Log for debugging
+                                console.log('Downloading payment proof:', {
+                                  journeyId: selectedJourney._id,
+                                  installmentIndex: i,
+                                  totalInstallments: (selectedJourney.pay?.installments || []).length,
+                                  installment: inst
+                                });
+
+                                const url = createApiUrl(`api/drives/${selectedJourney._id}/installment/${i}/proof`);
+                                const response = await fetch(url, {
+                                  headers: createAuthHeaders(token)
+                                });
+
+                                // Check if response is ok
+                                if (!response.ok) {
+                                  // Try to parse error message
+                                  try {
+                                    const errorData = await response.json();
+                                    setError(errorData.message || 'Failed to download payment proof');
+                                  } catch {
+                                    setError('Failed to download payment proof');
+                                  }
+                                  return;
+                                }
+
+                                // Check if response is actually a file (not JSON error)
+                                const contentType = response.headers.get('content-type');
+                                if (contentType && contentType.includes('application/json')) {
+                                  // This is an error response, parse it
+                                  const errorData = await response.json();
+                                  setError(errorData.message || 'Failed to download payment proof');
+                                  return;
+                                }
+
+                                // Convert response to blob - ensure binary data integrity
+                                const blob = await response.blob();
+                                
+                                // Verify blob size matches Content-Length header if available
+                                const contentLength = response.headers.get('content-length');
+                                if (contentLength && blob.size !== parseInt(contentLength, 10)) {
+                                  console.warn('Blob size mismatch', {
+                                    blobSize: blob.size,
+                                    contentLength: parseInt(contentLength, 10)
+                                  });
+                                  setError('Downloaded file size mismatch. File may be corrupted.');
+                                  return;
+                                }
+                                
+                                // Verify blob type matches expected
+                                const expectedMimeType = inst.attachment?.mimetype || 'application/pdf';
+                                if (blob.type && !blob.type.includes(expectedMimeType.split('/')[1]) && expectedMimeType !== 'application/pdf') {
+                                  console.warn('Blob type mismatch', {
+                                    blobType: blob.type,
+                                    expectedMimeType
+                                  });
+                                }
+                                
+                                // Create download link with proper MIME type
+                                const blobUrl = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.setAttribute('download', inst.attachment.filename || 'payment-proof');
+                                link.setAttribute('type', blob.type || expectedMimeType);
+                                document.body.appendChild(link);
+                                link.click();
+                                
+                                // Clean up after a short delay to ensure download starts
+                                setTimeout(() => {
+                                  document.body.removeChild(link);
+                                  window.URL.revokeObjectURL(blobUrl);
+                                }, 100);
+                              } catch (err) {
+                                console.error('Error downloading payment proof:', err);
+                                setError('Failed to download payment proof: ' + err.message);
+                              }
+                            }}
+                          >
+                            📎 View Proof
+                          </a>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
