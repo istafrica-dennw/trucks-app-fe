@@ -10,21 +10,21 @@
   display: flex;
   flex-direction: column;
   margin-left: 0;
-  padding-top: 60px; /* Account for mobile header */
+  padding-top: 101px; /* Account for mobile header */
   transition: margin-left 0.3s ease;
 }
 
 /* Add extra padding on mobile for browser URL bar */
 @media (max-width: 768px) {
   .trucks-main {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 60px); /* Header + safe area + browser URL bar */
+    padding-top: calc(101px + env(safe-area-inset-top, 0px) + 101px); /* Header + safe area + browser URL bar */
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* Bottom nav bar + safe area */
     transition: padding-top 0.3s ease;
   }
   
   /* Reduce top padding when header is hidden */
   body.mobile-header-hidden .trucks-main {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 60px); /* Safe area + browser URL bar (header height removed) */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 101px); /* Safe area + browser URL bar (header height removed) */
   }
 }
 
@@ -799,7 +799,7 @@
   }
   
   .trucks-header h1 {
-    font-size: 1.5rem;
+    font-size: 2.25rem;
   }
   
   .truck-card {

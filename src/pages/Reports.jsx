@@ -46,6 +46,12 @@ const Reports = () => {
     }
   };
 
+  // Helper to get selected truck plate number
+  const getSelectedTruckPlate = () => {
+    const t = trucks.find(truck => truck._id === selectedTruck);
+    return t ? t.plateNumber : '';
+  };
+
   const fetchReport = async () => {
     setLoading(true);
     setError(null);
@@ -136,6 +142,71 @@ const Reports = () => {
       setSelectedMonth(getCurrentMonth());
     }
   }, [reportType, selectedWeek, selectedMonth]);
+
+  // Export CSV helpers
+  const buildCsv = () => {
+    if (!reportData) return '';
+
+    const rows = [];
+    const pushRow = (arr) => rows.push(arr.map(v => {
+      if (v == null) return '';
+      const s = String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(','));
+
+    // Metadata header
+    pushRow([`Report Type`, reportType]);
+    if (reportType === 'daily') pushRow(['Date', selectedDate]);
+    if (reportType === 'weekly') pushRow(['Week', selectedWeek]);
+    if (reportType === 'monthly') pushRow(['Month', selectedMonth]);
+    if (reportType === 'custom') pushRow(['Range', `${dateRange.startDate} to ${dateRange.endDate}`, 'Group By', groupBy]);
+    if (selectedTruck) pushRow(['Truck Plate', getSelectedTruckPlate()]);
+    pushRow(['Generated At', new Date().toISOString()]);
+    pushRow([]);
+
+    // Summary
+    const summary = reportData.summary || reportData.overall;
+    if (summary) {
+      pushRow(['Summary']);
+      pushRow(['Total Journeys', summary.totalDrives]);
+      pushRow(['Total Revenue', summary.totalAmount]);
+      pushRow(['Total Expenses', summary.totalExpenses]);
+      pushRow(['Total Paid', summary.totalPaid]);
+      pushRow(['Net Profit', summary.netProfit]);
+      pushRow([]);
+    }
+
+    // Breakdown
+    if (Array.isArray(reportData.breakdown) && reportData.breakdown.length) {
+      pushRow(['Breakdown']);
+      pushRow(['Date', 'Journeys', 'Revenue', 'Expenses', 'Paid', 'Profit']);
+      reportData.breakdown.forEach(d => {
+        pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.totalPaid, d.netProfit]);
+      });
+    }
+
+    return rows.join('\n');
+  };
+
+  const handleExportCsv = () => {
+    const csv = buildCsv();
+    if (!csv) return;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    let name = `report-${reportType}-${stamp}`;
+    if (reportType === 'daily') name += `-${selectedDate}`;
+    if (reportType === 'weekly') name += `-${selectedWeek}`;
+    if (reportType === 'monthly') name += `-${selectedMonth}`;
+    if (reportType === 'custom') name += `-${dateRange.startDate}_to_${dateRange.endDate}`;
+    a.href = url;
+    a.download = `${name}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const renderReportSummary = (summary) => {
     if (!summary) return null;
@@ -318,6 +389,11 @@ const Reports = () => {
               </div>
             </div>
           )}
+
+          {/* Export Button */}
+          <div className="export-controls">
+            <button onClick={handleExportCsv} className="btn-export">Export CSV</button>
+          </div>
         </div>
 
         {loading && (

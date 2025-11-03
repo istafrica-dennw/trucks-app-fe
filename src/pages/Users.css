@@ -8,14 +8,14 @@
 .users-main {
   flex: 1;
   margin-left: 0;
-  padding-top: 60px; /* Account for mobile header */
+  padding-top: 101px; /* Account for mobile header */
   min-height: 100vh;
 }
 
 /* Add extra padding on mobile for browser URL bar */
 @media (max-width: 768px) {
   .users-main {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 60px); /* Header + safe area + browser URL bar */
+    padding-top: calc(101px + env(safe-area-inset-top, 0px) + 101px); /* Header + safe area + browser URL bar */
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); /* Bottom nav bar + safe area */
     min-height: 100dvh; /* Dynamic viewport height for mobile */
     transition: padding-top 0.3s ease;
@@ -23,7 +23,7 @@
   
   /* Reduce top padding when header is hidden */
   body.mobile-header-hidden .users-main {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 60px); /* Safe area + browser URL bar (header height removed) */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 101px); /* Safe area + browser URL bar (header height removed) */
   }
 }
 

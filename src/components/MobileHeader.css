@@ -18,7 +18,7 @@
   left: 0;
   right: 0;
   z-index: 1001;
-  height: 60px;
+  height: 101px;
   transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
 }
 

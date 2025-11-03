@@ -10,6 +10,9 @@
 
 .recent-activity__header {
   margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .recent-activity__title {
@@ -18,6 +21,29 @@
   color: #1e293b;
   margin: 0;
   line-height: 1.4;
+}
+
+.refresh-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+}
+
+.refresh-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .recent-activity__body {
@@ -94,6 +120,44 @@
   right: 0;
   height: 1px;
   background: #f1f5f9;
+}
+
+.recent-activity__loading,
+.recent-activity__error,
+.recent-activity__empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+}
+
+.recent-activity__loading p,
+.recent-activity__error p,
+.recent-activity__empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: #2563eb;
+}
+
+.recent-activity__performer {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+  font-style: italic;
 }
 
 /* Responsive Design */

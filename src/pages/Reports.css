@@ -11,7 +11,7 @@
   padding-right: 24px;
   padding-bottom: 24px;
   margin-left: 0;
-  padding-top: 60px; /* Account for mobile header */
+  padding-top: 101px; /* Account for mobile header */
   width: 100%;
   max-width: none;
   min-height: 100vh;
@@ -20,7 +20,7 @@
 /* Add extra padding on mobile for browser URL bar */
 @media (max-width: 768px) {
   .reports-main {
-    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 100px) !important; /* Header + safe area + browser URL bar (extra large for visibility) */
+    padding-top: calc(101px + env(safe-area-inset-top, 0px) + 100px) !important; /* Header + safe area + browser URL bar (extra large for visibility) */
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important; /* Bottom nav bar + safe area */
     min-height: 100dvh; /* Dynamic viewport height for mobile */
     transition: padding-top 0.3s ease;
