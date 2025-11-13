@@ -138,6 +138,14 @@ export const AuthProvider = ({ children }) => {
     return user && user.role === 'admin';
   };
 
+  const isAdminOrOfficer = () => {
+    return user && (user.role === 'admin' || user.role === 'officer');
+  };
+
+  const isOfficer = () => {
+    return user && user.role === 'officer';
+  };
+
   const value = {
     user,
     token,
@@ -148,6 +156,8 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     isAuthenticated,
     isAdmin,
+    isAdminOrOfficer,
+    isOfficer,
   };
 
   return (

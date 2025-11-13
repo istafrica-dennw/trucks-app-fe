@@ -6,7 +6,7 @@ import MobileHeader from '../components/MobileHeader';
 import './Settings.css';
 
 const Settings = () => {
-  const { token, isAdmin } = useAuth();
+  const { token, isAdminOrOfficer } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -20,10 +20,10 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    if (token && isAdmin()) {
+    if (token && isAdminOrOfficer()) {
       fetchSettings();
     }
-  }, [token, isAdmin]);
+  }, [token, isAdminOrOfficer]);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -94,7 +94,7 @@ const Settings = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  if (!isAdmin()) {
+  if (!isAdminOrOfficer()) {
     return (
       <div className="settings-page">
         <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />

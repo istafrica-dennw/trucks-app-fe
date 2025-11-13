@@ -49,7 +49,7 @@ const Login = () => {
         }
 
         // Redirect based on user role
-        if (result.user.role === 'admin') {
+        if (result.user.role === 'admin' || result.user.role === 'officer') {
           navigate('/admin/dashboard');
         } else {
           navigate('/dashboard');

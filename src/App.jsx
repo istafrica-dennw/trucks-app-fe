@@ -13,8 +13,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin = false, requireAdminOnly = false }) => {
+  const { user, loading, isAdminOrOfficer, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -29,7 +29,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && user.role !== 'admin') {
+  if (requireAdminOnly && !isAdmin()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireAdmin && !isAdminOrOfficer()) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -38,13 +42,20 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
 // Main App Routes
 const AppRoutes = () => {
-  const { user } = useAuth();
+  const { user, isAdminOrOfficer } = useAuth();
+
+  const getDashboardPath = () => {
+    if (isAdminOrOfficer()) {
+      return '/admin/dashboard';
+    }
+    return '/dashboard';
+  };
 
   return (
     <Routes>
       <Route 
         path="/login" 
-        element={user ? <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} replace /> : <Login />} 
+        element={user ? <Navigate to={getDashboardPath()} replace /> : <Login />} 
       />
       <Route 
         path="/dashboard" 
@@ -97,7 +108,7 @@ const AppRoutes = () => {
       <Route 
         path="/admin/reports" 
         element={
-          <ProtectedRoute requireAdmin={true}>
+          <ProtectedRoute requireAdminOnly={true}>
             <Reports />
           </ProtectedRoute>
         } 

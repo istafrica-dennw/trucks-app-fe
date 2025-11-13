@@ -358,6 +358,7 @@ const Users = () => {
                 >
                   <option value="">All Roles</option>
                   <option value="admin">Admin</option>
+                  <option value="officer">Officer</option>
                   <option value="user">User</option>
                 </select>
                 
@@ -420,6 +421,7 @@ const Users = () => {
                         title={userData._id === user?.id ? "You cannot change your own role" : "Change user role"}
                       >
                         <option value="user">User</option>
+                        <option value="officer">Officer</option>
                         <option value="admin">Admin</option>
                       </select>
                       {updatingRoles[userData._id] && (

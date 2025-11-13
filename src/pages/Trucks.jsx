@@ -6,7 +6,7 @@ import MobileHeader from '../components/MobileHeader';
 import './Trucks.css';
 
 const Trucks = () => {
-  const { user, token, isAdmin } = useAuth();
+  const { user, token, isAdminOrOfficer } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -411,7 +411,7 @@ const Trucks = () => {
         <div className="trucks-content">
           <div className="trucks-header">
             <h1>Trucks</h1>
-            {isAdmin() && (
+            {isAdminOrOfficer() && (
               <button onClick={handleAddTruckClick} className="add-truck-btn">
                 <div className="add-truck-text">
                   <span className="add-text">Add</span>
@@ -493,7 +493,7 @@ const Trucks = () => {
                       </svg>
                     </button>
                     
-                    {isAdmin() && (
+                    {isAdminOrOfficer() && (
                       <>
                         <button
                           onClick={() => handleEditTruckClick(truck._id)}

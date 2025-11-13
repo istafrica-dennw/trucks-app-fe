@@ -6,7 +6,7 @@ import './Sidebar.css';
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isAdminOrOfficer, isOfficer } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -29,7 +29,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
         </svg>
       ),
-      path: isAdmin() ? '/admin/dashboard' : '/dashboard',
+      path: isAdminOrOfficer() ? '/admin/dashboard' : '/dashboard',
       adminOnly: false
     },
     {
@@ -51,7 +51,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M20 8H17V4H3C1.9 4 1 4.9 1 6V17H3C3 18.66 4.34 20 6 20S9 18.66 9 17H15C15 18.66 16.34 20 18 20S21 18.66 21 17H23V12L20 8ZM6 18.5C5.17 18.5 4.5 17.83 4.5 17S5.17 15.5 6 15.5 7.5 16.17 7.5 17 6.83 18.5 6 18.5ZM18 18.5C17.17 18.5 16.5 17.83 16.5 17S17.17 15.5 18 15.5 19.5 16.17 19.5 17 18.83 18.5 18 18.5ZM17 12V10H19.5L21.46 12H17Z" fill="currentColor"/>
         </svg>
       ),
-      path: isAdmin() ? '/admin/trucks' : '/trucks',
+      path: isAdminOrOfficer() ? '/admin/trucks' : '/trucks',
       adminOnly: false
     },
     {
@@ -62,7 +62,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
         </svg>
       ),
-      path: isAdmin() ? '/admin/drivers' : '/drivers',
+      path: isAdminOrOfficer() ? '/admin/drivers' : '/drivers',
       adminOnly: false
     },
     {
@@ -73,7 +73,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22S19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5Z" fill="currentColor"/>
         </svg>
       ),
-      path: isAdmin() ? '/admin/journeys' : '/journeys',
+      path: isAdminOrOfficer() ? '/admin/journeys' : '/journeys',
       adminOnly: false
     },
     {
@@ -85,7 +85,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         </svg>
       ),
       path: isAdmin() ? '/admin/reports' : '/reports',
-      adminOnly: false
+      adminOnly: false,
+      adminOnlyAccess: true // Only admin can see reports
     },
     {
       id: 'settings',
@@ -101,7 +102,15 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   // Filter menu items based on user role
-  const filteredMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin());
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.adminOnlyAccess && !isAdmin()) {
+      return false; // Reports are admin-only
+    }
+    if (item.adminOnly && !isAdminOrOfficer()) {
+      return false; // Other admin items require admin or officer
+    }
+    return true;
+  });
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -124,7 +133,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
           <div className="brand">
             <h1 className="brand-name">UrwuriApp</h1>
-            <p className="brand-subtitle">{isAdmin() ? 'Admin Panel' : 'User Panel'}</p>
+            <p className="brand-subtitle">{isAdminOrOfficer() ? (isAdmin() ? 'Admin Panel' : 'Officer Panel') : 'User Panel'}</p>
           </div>
         </div>
 
@@ -148,7 +157,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* User Actions */}
       <div className="sidebar-footer">
-        <button className="nav-link profile-link" onClick={() => handleNavigation(isAdmin() ? '/admin/profile' : '/profile')}>
+        <button className="nav-link profile-link" onClick={() => handleNavigation(isAdminOrOfficer() ? '/admin/profile' : '/profile')}>
           <span className="nav-icon">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>

@@ -60,24 +60,29 @@ const Reports = () => {
       let url = '';
       const headers = createAuthHeaders(token);
 
-      const truckParam = selectedTruck ? `?truckId=${selectedTruck}` : '';
-      
       switch (reportType) {
         case 'daily':
-          url = createApiUrl(`api/reports/daily/${selectedDate}${truckParam}`);
+          url = createApiUrl(`api/reports/daily/${selectedDate}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
           break;
         case 'weekly':
-          url = createApiUrl(`api/reports/weekly/${selectedWeek}${truckParam}`);
+          url = createApiUrl(`api/reports/weekly/${selectedWeek}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
           break;
         case 'monthly':
-          url = createApiUrl(`api/reports/monthly/${selectedMonth}${truckParam}`);
+          url = createApiUrl(`api/reports/monthly/${selectedMonth}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
           break;
         case 'custom':
-          const baseUrl = createApiUrl(`api/reports/custom?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&groupBy=${groupBy}`);
-          url = selectedTruck ? `${baseUrl}&truckId=${selectedTruck}` : baseUrl;
+          const params = new URLSearchParams({
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+            groupBy: groupBy
+          });
+          if (selectedTruck && selectedTruck.trim() !== '') {
+            params.append('truckId', selectedTruck);
+          }
+          url = createApiUrl(`api/reports/custom?${params.toString()}`);
           break;
         case 'summary':
-          url = createApiUrl(`api/reports/summary${truckParam}`);
+          url = createApiUrl(`api/reports/summary${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
           break;
         default:
           throw new Error('Invalid report type');
