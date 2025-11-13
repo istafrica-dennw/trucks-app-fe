@@ -7,6 +7,7 @@ import Trucks from './pages/Trucks';
 import Drivers from './pages/Drivers';
 import Journeys from './pages/Journeys';
 import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
@@ -132,6 +133,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Reports />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/settings" 
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <Settings />
           </ProtectedRoute>
         } 
       />

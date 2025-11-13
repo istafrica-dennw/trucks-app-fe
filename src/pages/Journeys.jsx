@@ -11,6 +11,12 @@ const Journeys = () => {
   const [journeys, setJourneys] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [trucks, setTrucks] = useState([]);
+  const [defaultExchangeRates, setDefaultExchangeRates] = useState({
+    USD: 1200,
+    RWF: 1,
+    UGX: 3.2,
+    TZX: 0.52
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -35,9 +41,11 @@ const Journeys = () => {
     destinationCity: '',
     cargo: '',
     customer: '',
-    expenses: [],
+    expenses: [], // Each expense can have: { title, amount, note, attachmentFile }
     pay: {
       totalAmount: '',
+      currency: 'RWF',
+      exchangeRate: 1,
       paidOption: 'full',
       installments: []
     },
@@ -226,6 +234,23 @@ const Journeys = () => {
     }
   };
 
+  // Fetch default exchange rates from settings
+  const fetchDefaultExchangeRates = async () => {
+    try {
+      const response = await fetch(createApiUrl('api/settings'), {
+        headers: createAuthHeaders(token)
+      });
+      const data = await response.json();
+
+      if (response.ok && data.data?.exchangeRates) {
+        setDefaultExchangeRates(data.data.exchangeRates);
+      }
+    } catch (err) {
+      console.error('Failed to fetch default exchange rates:', err);
+      // Use defaults if fetch fails
+    }
+  };
+
   // Fetch journey details
   const fetchJourneyDetails = async (journeyId) => {
     try {
@@ -273,7 +298,7 @@ const Journeys = () => {
       destinationCity: '',
       cargo: '',
       customer: '',
-      expenses: [],
+      expenses: [], // Each expense can have: { title, amount, note, attachmentFile }
       pay: {
         totalAmount: '',
         paidOption: 'full',
@@ -437,12 +462,12 @@ const Journeys = () => {
     if (showAddModal) {
       setNewJourney(prev => ({
         ...prev,
-        expenses: [...prev.expenses, { title: '', amount: '', note: '' }]
+        expenses: [...prev.expenses, { title: '', amount: '', note: '', attachmentFile: null }]
       }));
     } else if (showEditModal && selectedJourney) {
       setSelectedJourney(prev => ({
         ...prev,
-        expenses: [...prev.expenses, { title: '', amount: '', note: '' }]
+        expenses: [...(prev.expenses || []), { title: '', amount: '', note: '', attachmentFile: null }]
       }));
     }
   };
@@ -470,12 +495,13 @@ const Journeys = () => {
     setFieldErrors({});
 
     try {
-      // Check if we need to upload a file for full payment
+      // Check if we need to upload files (payment proof or expense proofs)
       const hasPaymentProof = newJourney.pay.paidOption === 'full' && newJourney.pay.paymentProofFile;
+      const hasExpenseFiles = newJourney.expenses.some(exp => exp.attachmentFile);
       
       let response;
       
-      if (hasPaymentProof) {
+      if (hasPaymentProof || hasExpenseFiles) {
         // Use FormData for file upload
         const formData = new FormData();
         formData.append('driver', newJourney.driver);
@@ -488,6 +514,8 @@ const Journeys = () => {
         formData.append('status', newJourney.status);
         formData.append('date', newJourney.date);
         formData.append('pay[totalAmount]', parseFloat(newJourney.pay.totalAmount));
+        formData.append('pay[currency]', newJourney.pay.currency || 'RWF');
+        formData.append('pay[exchangeRate]', parseFloat(newJourney.pay.exchangeRate || 1));
         formData.append('pay[paidOption]', newJourney.pay.paidOption);
         formData.append('pay[attachment]', newJourney.pay.paymentProofFile); // Field name for full payment proof
         
@@ -497,6 +525,9 @@ const Journeys = () => {
           formData.append(`expenses[${index}][amount]`, parseFloat(expense.amount));
           if (expense.note) {
             formData.append(`expenses[${index}][note]`, expense.note);
+          }
+          if (expense.attachmentFile) {
+            formData.append(`expenses[${index}][attachment]`, expense.attachmentFile);
           }
         });
 
@@ -510,24 +541,26 @@ const Journeys = () => {
         });
       } else {
         // Use JSON for regular submission
-        const journeyData = {
-          ...newJourney,
-          pay: {
-            ...newJourney.pay,
-            totalAmount: parseFloat(newJourney.pay.totalAmount),
-            installments: newJourney.pay.paidOption === 'full' ? [] : newJourney.pay.installments
-          },
-          expenses: newJourney.expenses.map(expense => ({
-            ...expense,
-            amount: parseFloat(expense.amount)
-          }))
-        };
+      const journeyData = {
+        ...newJourney,
+        pay: {
+          ...newJourney.pay,
+          totalAmount: parseFloat(newJourney.pay.totalAmount),
+            currency: newJourney.pay.currency || 'RWF',
+            exchangeRate: parseFloat(newJourney.pay.exchangeRate || 1),
+          installments: newJourney.pay.paidOption === 'full' ? [] : newJourney.pay.installments
+        },
+        expenses: newJourney.expenses.map(expense => ({
+          ...expense,
+          amount: parseFloat(expense.amount)
+        }))
+      };
 
         response = await fetch(createApiUrl('api/drives'), {
-          method: 'POST',
-          headers: createAuthHeaders(token),
-          body: JSON.stringify(journeyData)
-        });
+        method: 'POST',
+        headers: createAuthHeaders(token),
+        body: JSON.stringify(journeyData)
+      });
       }
 
       const data = await response.json();
@@ -556,9 +589,11 @@ const Journeys = () => {
         destinationCity: '',
         cargo: '',
         customer: '',
-        expenses: [],
+        expenses: [], // Each expense can have: { title, amount, note, attachmentFile }
         pay: {
           totalAmount: '',
+          currency: 'RWF',
+          exchangeRate: 1,
           paidOption: 'full',
           installments: [],
           paymentProofFile: null
@@ -589,6 +624,7 @@ const Journeys = () => {
     try {
       // Check if we need to upload a file for full payment
       const hasFullPaymentProof = selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.paymentProofFile;
+      const hasExpenseFiles = (selectedJourney.expenses || []).some(exp => exp.attachmentFile);
       
       // Separate new installments with files from existing ones
       const newInstallmentsWithFiles = [];
@@ -628,8 +664,8 @@ const Journeys = () => {
 
       let response;
       
-      if (hasFullPaymentProof) {
-        // Use FormData for full payment with file upload
+      if (hasFullPaymentProof || hasExpenseFiles) {
+        // Use FormData for full payment with file upload or expenses with file uploads
         const formData = new FormData();
         formData.append('driver', selectedJourney.driver?._id || selectedJourney.driver);
         formData.append('truck', selectedJourney.truck?._id || selectedJourney.truck);
@@ -641,6 +677,8 @@ const Journeys = () => {
         formData.append('status', selectedJourney.status);
         formData.append('date', selectedJourney.date);
         formData.append('pay[totalAmount]', parseFloat(selectedJourney.pay?.totalAmount ?? 0));
+        formData.append('pay[currency]', selectedJourney.pay?.currency || 'RWF');
+        formData.append('pay[exchangeRate]', parseFloat(selectedJourney.pay?.exchangeRate || 1));
         formData.append('pay[paidOption]', selectedJourney.pay?.paidOption || 'full');
         formData.append('pay[attachment]', selectedJourney.pay.paymentProofFile);
         
@@ -650,6 +688,9 @@ const Journeys = () => {
           formData.append(`expenses[${index}][amount]`, parseFloat(expense.amount));
           if (expense.note) {
             formData.append(`expenses[${index}][note]`, expense.note);
+          }
+          if (expense.attachmentFile) {
+            formData.append(`expenses[${index}][attachment]`, expense.attachmentFile);
           }
         });
 
@@ -662,27 +703,30 @@ const Journeys = () => {
           body: formData
         });
       } else {
-        // Prepare journey data (only allowed fields; convert populated objects to IDs)
-        const journeyData = {
-          driver: selectedJourney.driver?._id || selectedJourney.driver,
-          truck: selectedJourney.truck?._id || selectedJourney.truck,
-          departureCity: selectedJourney.departureCity,
-          destinationCity: selectedJourney.destinationCity,
-          cargo: selectedJourney.cargo,
-          customer: selectedJourney.customer,
-          notes: selectedJourney.notes,
-          status: selectedJourney.status,
-          date: selectedJourney.date,
-          expenses: (selectedJourney.expenses || []).map(expense => ({
-            title: expense.title,
-            amount: parseFloat(expense.amount),
-            note: expense.note
-          })),
-          pay: {
-            totalAmount: parseFloat(selectedJourney.pay?.totalAmount ?? 0),
-            paidOption: selectedJourney.pay?.paidOption || 'full',
-            installments: selectedJourney.pay?.paidOption === 'full' ? [] : existingInstallments
-          }
+      // Prepare journey data (only allowed fields; convert populated objects to IDs)
+      const journeyData = {
+        driver: selectedJourney.driver?._id || selectedJourney.driver,
+        truck: selectedJourney.truck?._id || selectedJourney.truck,
+        departureCity: selectedJourney.departureCity,
+        destinationCity: selectedJourney.destinationCity,
+        cargo: selectedJourney.cargo,
+        customer: selectedJourney.customer,
+        notes: selectedJourney.notes,
+        status: selectedJourney.status,
+        date: selectedJourney.date,
+        expenses: (selectedJourney.expenses || []).map(expense => ({
+          title: expense.title,
+          amount: parseFloat(expense.amount),
+            note: expense.note,
+            attachment: expense.attachment // Preserve existing attachment
+        })),
+        pay: {
+          totalAmount: parseFloat(selectedJourney.pay?.totalAmount ?? 0),
+          currency: selectedJourney.pay?.currency || 'RWF',
+          exchangeRate: parseFloat(selectedJourney.pay?.exchangeRate || 1),
+          paidOption: selectedJourney.pay?.paidOption || 'full',
+          installments: selectedJourney.pay?.paidOption === 'full' ? [] : existingInstallments
+        }
         };
         
         // Preserve existing full payment attachment if no new file is provided
@@ -696,10 +740,10 @@ const Journeys = () => {
         }
 
         response = await fetch(createApiUrl(`api/drives/${selectedJourney._id}`), {
-          method: 'PUT',
-          headers: createAuthHeaders(token),
-          body: JSON.stringify(journeyData)
-        });
+        method: 'PUT',
+        headers: createAuthHeaders(token),
+        body: JSON.stringify(journeyData)
+      });
       }
 
       const data = await response.json();
@@ -879,11 +923,27 @@ const Journeys = () => {
   };
 
   // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (amount, currency = 'USD') => {
+    // Map currency codes to locale
+    const currencyMap = {
+      'USD': 'en-US',
+      'RWF': 'en-RW',
+      'UGX': 'en-UG',
+      'TZX': 'en-TZ'
+    };
+    
+    const locale = currencyMap[currency] || 'en-US';
+    
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+      currency: currency
+    }).format(amount || 0);
+  };
+
+  // Convert amount to RWF
+  const convertToRWF = (amount, currency, exchangeRate) => {
+    if (currency === 'RWF') return amount;
+    return amount * (exchangeRate || 1);
   };
 
   // Get status badge class
@@ -909,6 +969,7 @@ const Journeys = () => {
     if (token) {
       fetchJourneys();
       fetchDriversAndTrucks();
+      fetchDefaultExchangeRates();
     }
   }, [token]);
 
@@ -1033,11 +1094,25 @@ const Journeys = () => {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Amount:</span>
-                    <span className="detail-value">{formatCurrency(journey.pay.totalAmount)}</span>
+                    <span className="detail-value">
+                      {formatCurrency(journey.pay.totalAmount, journey.pay.currency || 'RWF')}
+                      {journey.pay.currency && journey.pay.currency !== 'RWF' && (
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>
+                          ({formatCurrency(convertToRWF(journey.pay.totalAmount, journey.pay.currency, journey.pay.exchangeRate), 'RWF')})
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="detail-row">
-                    <span className="detail-label">Balance:</span>
-                    <span className="detail-value">{formatCurrency(journey.balance || 0)}</span>
+                    <span className="detail-label">Profit:</span>
+                    <span className="detail-value">
+                      {formatCurrency(journey.balance || 0, journey.pay?.currency || 'RWF')}
+                      {journey.pay?.currency && journey.pay.currency !== 'RWF' && journey.balance && (
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>
+                          ({formatCurrency(convertToRWF(journey.balance, journey.pay.currency, journey.pay.exchangeRate), 'RWF')})
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
 
@@ -1241,6 +1316,53 @@ const Journeys = () => {
                 </div>
                 
                 <div className="form-group">
+                  <label htmlFor="pay.currency">Currency *</label>
+                  <select
+                    id="pay.currency"
+                    name="pay.currency"
+                    value={newJourney.pay.currency || 'RWF'}
+                    onChange={(e) => {
+                      const currency = e.target.value;
+                      setNewJourney(prev => ({
+                        ...prev,
+                        pay: {
+                          ...prev.pay,
+                          currency: currency,
+                          exchangeRate: currency === 'RWF' ? 1 : (defaultExchangeRates[currency] || prev.pay.exchangeRate || 1)
+                        }
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="RWF">RWF (Rwandan Franc)</option>
+                    <option value="USD">USD (US Dollar)</option>
+                    <option value="UGX">UGX (Ugandan Shilling)</option>
+                    <option value="TZX">TZX (Tanzanian Shilling)</option>
+                  </select>
+                  {renderFieldError('pay.currency')}
+                </div>
+              </div>
+
+              {newJourney.pay.currency !== 'RWF' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="pay.exchangeRate">Exchange Rate (to RWF) *</label>
+                    <input
+                      type="number"
+                      id="pay.exchangeRate"
+                      name="pay.exchangeRate"
+                      value={newJourney.pay.exchangeRate || 1}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0.01"
+                      required
+                      placeholder="e.g., 1200 for USD"
+                    />
+                    <small className="form-help">1 {newJourney.pay.currency} = {newJourney.pay.exchangeRate || 1} RWF</small>
+                    {renderFieldError('pay.exchangeRate')}
+                </div>
+                
+                <div className="form-group">
                   <label htmlFor="pay.paidOption">Payment Option *</label>
                   <select
                     id="pay.paidOption"
@@ -1255,6 +1377,26 @@ const Journeys = () => {
                   {renderFieldError('pay.paidOption')}
                 </div>
               </div>
+              )}
+
+              {newJourney.pay.currency === 'RWF' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="pay.paidOption">Payment Option *</label>
+                    <select
+                      id="pay.paidOption"
+                      name="pay.paidOption"
+                      value={newJourney.pay.paidOption}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="full">Full Payment</option>
+                      <option value="installment">Installment</option>
+                    </select>
+                    {renderFieldError('pay.paidOption')}
+                  </div>
+                </div>
+              )}
 
               {/* Payment Proof Section (only when paidOption is full) */}
               {newJourney.pay.paidOption === 'full' && (
@@ -1341,9 +1483,9 @@ const Journeys = () => {
                   ))}
 
                   <div className="journey-info">
-                    <p><strong>Total Amount:</strong> {formatCurrency(parseFloat(newJourney.pay.totalAmount || 0))}</p>
-                    <p><strong>Total Installments:</strong> {formatCurrency(computeInstallmentsTotal(newJourney.pay.installments))}</p>
-                    <p><strong>Remaining:</strong> {formatCurrency(Math.max(0, (parseFloat(newJourney.pay.totalAmount || 0) - computeInstallmentsTotal(newJourney.pay.installments))))}</p>
+                    <p><strong>Total Amount:</strong> {formatCurrency(parseFloat(newJourney.pay.totalAmount || 0), newJourney.pay.currency || 'RWF')}</p>
+                    <p><strong>Total Installments:</strong> {formatCurrency(computeInstallmentsTotal(newJourney.pay.installments), newJourney.pay.currency || 'RWF')}</p>
+                    <p><strong>Remaining:</strong> {formatCurrency(Math.max(0, (parseFloat(newJourney.pay.totalAmount || 0) - computeInstallmentsTotal(newJourney.pay.installments))), newJourney.pay.currency || 'RWF')}</p>
                   </div>
                 </div>
               )}
@@ -1351,7 +1493,7 @@ const Journeys = () => {
               {/* Expenses Section */}
               <div className="expenses-section">
                 <div className="section-header">
-                  <h3>Expenses</h3>
+                  <h3>Expenses (RWF)</h3>
                   <button type="button" onClick={addExpense} className="add-expense-btn">
                     + Add Expense
                   </button>
@@ -1368,13 +1510,46 @@ const Journeys = () => {
                     />
                     <input
                       type="number"
-                      placeholder="Amount"
+                      placeholder="Amount (RWF)"
                       value={expense.amount}
                       onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
                       step="0.01"
                       min="0"
                       className="expense-amount"
                     />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                          if (!allowedTypes.includes(file.type)) {
+                            setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+                            e.target.value = '';
+                            return;
+                          }
+                          if (file.size > 10 * 1024 * 1024) {
+                            setError('File size exceeds 10MB limit.');
+                            e.target.value = '';
+                            return;
+                          }
+                          handleExpenseChange(index, 'attachmentFile', file);
+                          setError(null);
+                        }
+                      }}
+                      className="expense-attachment"
+                    />
+                    {expense.attachmentFile && (
+                      <span style={{ padding: '4px', color: '#3b82f6', fontSize: '0.875rem' }}>
+                        📎 {expense.attachmentFile.name}
+                      </span>
+                    )}
+                    {expense.attachment && !expense.attachmentFile && (
+                      <span style={{ padding: '4px', color: '#059669', fontSize: '0.875rem' }}>
+                        📎 {expense.attachment.filename}
+                      </span>
+                    )}
                     <input
                       type="text"
                       placeholder="Note (optional)"
@@ -1450,9 +1625,9 @@ const Journeys = () => {
               <div className="journey-info">
                 <p><strong>Journey:</strong> {selectedJourney.departureCity} → {selectedJourney.destinationCity}</p>
                 <p><strong>Customer:</strong> {selectedJourney.customer}</p>
-                <p><strong>Total Amount:</strong> {formatCurrency(selectedJourney.pay.totalAmount)}</p>
-                <p><strong>Paid So Far:</strong> {formatCurrency(selectedJourney.totalPaid || 0)}</p>
-                <p><strong>Remaining:</strong> {formatCurrency(selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0))}</p>
+                <p><strong>Total Amount:</strong> {formatCurrency(selectedJourney.pay.totalAmount, selectedJourney.pay.currency || 'RWF')}</p>
+                <p><strong>Paid So Far:</strong> {formatCurrency(selectedJourney.totalPaid || 0, selectedJourney.pay.currency || 'RWF')}</p>
+                <p><strong>Remaining:</strong> {formatCurrency(selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0), selectedJourney.pay.currency || 'RWF')}</p>
                 {selectedJourney.pay?.paidOption === 'full' && selectedJourney.pay?.attachment && (
                   <p>
                     <strong>Proof of Payment:</strong>{' '}
@@ -1511,7 +1686,7 @@ const Journeys = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="amount">Amount *</label>
+                <label htmlFor="amount">Amount ({selectedJourney.pay?.currency || 'RWF'}) *</label>
                 <input
                   type="number"
                   id="amount"
@@ -1523,6 +1698,7 @@ const Journeys = () => {
                   max={selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0)}
                   required
                 />
+                <small className="form-help">Installment must be in {selectedJourney.pay?.currency || 'RWF'}</small>
                 {renderFieldError('amount')}
               </div>
 
@@ -1698,6 +1874,53 @@ const Journeys = () => {
                 </div>
 
                 <div className="form-group">
+                  <label htmlFor="edit-currency">Currency *</label>
+                  <select
+                    id="edit-currency"
+                    name="pay.currency"
+                    value={selectedJourney.pay?.currency || 'RWF'}
+                    onChange={(e) => {
+                      const currency = e.target.value;
+                      setSelectedJourney(prev => ({
+                        ...prev,
+                        pay: {
+                          ...prev.pay,
+                          currency: currency,
+                          exchangeRate: currency === 'RWF' ? 1 : (defaultExchangeRates[currency] || prev.pay?.exchangeRate || 1)
+                        }
+                      }));
+                    }}
+                    required
+                  >
+                    <option value="RWF">RWF (Rwandan Franc)</option>
+                    <option value="USD">USD (US Dollar)</option>
+                    <option value="UGX">UGX (Ugandan Shilling)</option>
+                    <option value="TZX">TZX (Tanzanian Shilling)</option>
+                  </select>
+                  {renderFieldError('pay.currency')}
+                </div>
+              </div>
+
+              {selectedJourney.pay?.currency !== 'RWF' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-exchangeRate">Exchange Rate (to RWF) *</label>
+                    <input
+                      type="number"
+                      id="edit-exchangeRate"
+                      name="pay.exchangeRate"
+                      value={selectedJourney.pay?.exchangeRate || 1}
+                      onChange={handleInputChange}
+                      step="0.01"
+                      min="0.01"
+                      required
+                      placeholder="e.g., 1200 for USD"
+                    />
+                    <small className="form-help">1 {selectedJourney.pay?.currency || 'RWF'} = {selectedJourney.pay?.exchangeRate || 1} RWF</small>
+                    {renderFieldError('pay.exchangeRate')}
+                </div>
+
+                <div className="form-group">
                   <label htmlFor="edit-paidOption">Payment Option *</label>
                   <select
                     id="edit-paidOption"
@@ -1712,6 +1935,26 @@ const Journeys = () => {
                   {renderFieldError('pay.paidOption')}
                 </div>
               </div>
+              )}
+
+              {selectedJourney.pay?.currency === 'RWF' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-paidOption">Payment Option *</label>
+                    <select
+                      id="edit-paidOption"
+                      name="pay.paidOption"
+                      value={selectedJourney.pay?.paidOption || 'full'}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="full">Full Payment</option>
+                      <option value="installment">Installment</option>
+                    </select>
+                    {renderFieldError('pay.paidOption')}
+                  </div>
+                </div>
+              )}
 
               {/* Payment Proof Section for Full Payment (Edit Mode) */}
               {selectedJourney.pay?.paidOption === 'full' && (
@@ -1853,9 +2096,9 @@ const Journeys = () => {
                   ))}
 
                   <div className="journey-info">
-                    <p><strong>Total Amount:</strong> {formatCurrency(parseFloat(selectedJourney.pay?.totalAmount || 0))}</p>
-                    <p><strong>Total Installments:</strong> {formatCurrency(computeInstallmentsTotal(selectedJourney.pay?.installments || []))}</p>
-                    <p><strong>Remaining:</strong> {formatCurrency(Math.max(0, (parseFloat(selectedJourney.pay?.totalAmount || 0) - computeInstallmentsTotal(selectedJourney.pay?.installments || []))))}</p>
+                    <p><strong>Total Amount:</strong> {formatCurrency(parseFloat(selectedJourney.pay?.totalAmount || 0), selectedJourney.pay?.currency || 'RWF')}</p>
+                    <p><strong>Total Installments:</strong> {formatCurrency(computeInstallmentsTotal(selectedJourney.pay?.installments || []), selectedJourney.pay?.currency || 'RWF')}</p>
+                    <p><strong>Remaining:</strong> {formatCurrency(Math.max(0, (parseFloat(selectedJourney.pay?.totalAmount || 0) - computeInstallmentsTotal(selectedJourney.pay?.installments || []))), selectedJourney.pay?.currency || 'RWF')}</p>
                   </div>
                 </div>
               )}
@@ -1863,7 +2106,7 @@ const Journeys = () => {
               {/* Expenses */}
               <div className="expenses-section">
                 <div className="section-header">
-                  <h3>Expenses</h3>
+                  <h3>Expenses (RWF)</h3>
                   <button type="button" onClick={addExpense} className="add-expense-btn">
                     + Add Expense
                   </button>
@@ -1880,13 +2123,46 @@ const Journeys = () => {
                     />
                     <input
                       type="number"
-                      placeholder="Amount"
+                      placeholder="Amount (RWF)"
                       value={expense.amount}
                       onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
                       step="0.01"
                       min="0"
                       className="expense-amount"
                     />
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+                          if (!allowedTypes.includes(file.type)) {
+                            setError('Invalid file type. Only images (JPEG, PNG, GIF, WEBP) and PDF files are allowed.');
+                            e.target.value = '';
+                            return;
+                          }
+                          if (file.size > 10 * 1024 * 1024) {
+                            setError('File size exceeds 10MB limit.');
+                            e.target.value = '';
+                            return;
+                          }
+                          handleExpenseChange(index, 'attachmentFile', file);
+                          setError(null);
+                        }
+                      }}
+                      className="expense-attachment"
+                    />
+                    {expense.attachmentFile && (
+                      <span style={{ padding: '4px', color: '#3b82f6', fontSize: '0.875rem' }}>
+                        📎 {expense.attachmentFile.name}
+                      </span>
+                    )}
+                    {expense.attachment && !expense.attachmentFile && (
+                      <span style={{ padding: '4px', color: '#059669', fontSize: '0.875rem' }}>
+                        📎 {expense.attachment.filename}
+                      </span>
+                    )}
                     <input
                       type="text"
                       placeholder="Note (optional)"
@@ -1946,18 +2222,106 @@ const Journeys = () => {
               <div className="detail-row"><span className="detail-label">Truck</span><span className="detail-value">{selectedJourney.truck?.plateNumber || 'N/A'}</span></div>
               <div className="detail-row"><span className="detail-label">Customer</span><span className="detail-value">{selectedJourney.customer}</span></div>
               <div className="detail-row"><span className="detail-label">Cargo</span><span className="detail-value">{selectedJourney.cargo}</span></div>
-              <div className="detail-row"><span className="detail-label">Payment</span><span className="detail-value">{selectedJourney.pay?.paidOption} — {formatCurrency(selectedJourney.pay?.totalAmount || 0)}</span></div>
-              <div className="detail-row"><span className="detail-label">Total Expenses</span><span className="detail-value">{formatCurrency(selectedJourney.totalExpenses || 0)}</span></div>
-              <div className="detail-row"><span className="detail-label">Total Paid</span><span className="detail-value">{formatCurrency(selectedJourney.totalPaid || 0)}</span></div>
-              <div className="detail-row"><span className="detail-label">Balance</span><span className="detail-value">{formatCurrency(selectedJourney.calculatedBalance ?? selectedJourney.balance ?? 0)}</span></div>
+              <div className="detail-row">
+                <span className="detail-label">Payment</span>
+                <span className="detail-value">
+                  {selectedJourney.pay?.paidOption} — {formatCurrency(selectedJourney.pay?.totalAmount || 0, selectedJourney.pay?.currency || 'RWF')}
+                  {selectedJourney.pay?.currency && selectedJourney.pay.currency !== 'RWF' && (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>
+                      ({formatCurrency(convertToRWF(selectedJourney.pay.totalAmount, selectedJourney.pay.currency, selectedJourney.pay.exchangeRate), 'RWF')})
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Total Expenses (RWF)</span>
+                <span className="detail-value">{formatCurrency(selectedJourney.totalExpenses || 0, 'RWF')}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Total Paid</span>
+                <span className="detail-value">
+                  {formatCurrency(selectedJourney.totalPaid || 0, selectedJourney.pay?.currency || 'RWF')}
+                  {selectedJourney.pay?.currency && selectedJourney.pay.currency !== 'RWF' && selectedJourney.totalPaid && (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>
+                      ({formatCurrency(convertToRWF(selectedJourney.totalPaid, selectedJourney.pay.currency, selectedJourney.pay.exchangeRate), 'RWF')})
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Profit</span>
+                <span className="detail-value">
+                  {formatCurrency(selectedJourney.calculatedBalance ?? selectedJourney.balance ?? 0, selectedJourney.pay?.currency || 'RWF')}
+                  {selectedJourney.pay?.currency && selectedJourney.pay.currency !== 'RWF' && (selectedJourney.calculatedBalance ?? selectedJourney.balance) && (
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '4px' }}>
+                      ({formatCurrency(convertToRWF(selectedJourney.calculatedBalance ?? selectedJourney.balance ?? 0, selectedJourney.pay.currency, selectedJourney.pay.exchangeRate), 'RWF')})
+                    </span>
+                  )}
+                </span>
+              </div>
 
               {(selectedJourney.expenses || []).length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <h3 style={{ margin: '0 0 8px 0' }}>Expenses</h3>
+                  <h3 style={{ margin: '0 0 8px 0' }}>Expenses (RWF)</h3>
                   {(selectedJourney.expenses || []).map((exp, i) => (
                     <div key={i} className="detail-row">
                       <span className="detail-label">{exp.title}</span>
-                      <span className="detail-value">{formatCurrency(exp.amount)}{exp.note ? ` — ${exp.note}` : ''}</span>
+                      <span className="detail-value">
+                        {formatCurrency(exp.amount, 'RWF')}
+                        {exp.note ? ` — ${exp.note}` : ''}
+                        {exp.attachment && (
+                          <a
+                            href={createApiUrl(`api/drives/${selectedJourney._id}/expense/${i}/proof`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: '#3b82f6', textDecoration: 'underline', marginLeft: '8px' }}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              try {
+                                const url = createApiUrl(`api/drives/${selectedJourney._id}/expense/${i}/proof`);
+                                const response = await fetch(url, {
+                                  headers: createAuthHeaders(token)
+                                });
+
+                                if (!response.ok) {
+                                  try {
+                                    const errorData = await response.json();
+                                    setError(errorData.message || 'Failed to download expense proof');
+                                  } catch {
+                                    setError('Failed to download expense proof');
+                                  }
+                                  return;
+                                }
+
+                                const contentType = response.headers.get('content-type');
+                                if (contentType && contentType.includes('application/json')) {
+                                  const errorData = await response.json();
+                                  setError(errorData.message || 'Failed to download expense proof');
+                                  return;
+                                }
+
+                                const blob = await response.blob();
+                                const blobUrl = window.URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = blobUrl;
+                                link.setAttribute('download', exp.attachment.filename || 'expense-proof');
+                                link.setAttribute('type', blob.type || exp.attachment.mimetype);
+                                document.body.appendChild(link);
+                                link.click();
+                                setTimeout(() => {
+                                  document.body.removeChild(link);
+                                  window.URL.revokeObjectURL(blobUrl);
+                                }, 100);
+                              } catch (err) {
+                                console.error('Error downloading expense proof:', err);
+                                setError('Failed to download expense proof: ' + err.message);
+                              }
+                            }}
+                          >
+                            📎 View Proof
+                          </a>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -2026,12 +2390,12 @@ const Journeys = () => {
 
               {(selectedJourney.pay?.installments || []).length > 0 && (
                 <div style={{ marginTop: 16 }}>
-                  <h3 style={{ margin: '0 0 8px 0' }}>Installments</h3>
+                  <h3 style={{ margin: '0 0 8px 0' }}>Installments ({selectedJourney.pay?.currency || 'RWF'})</h3>
                   {(selectedJourney.pay?.installments || []).map((inst, i) => (
                     <div key={i} className="detail-row">
                       <span className="detail-label">{formatDate(inst.date)}</span>
                       <span className="detail-value">
-                        {formatCurrency(inst.amount)}
+                        {formatCurrency(inst.amount, selectedJourney.pay?.currency || 'RWF')}
                         {inst.attachment && (
                           <a
                             href={createApiUrl(`api/drives/${selectedJourney._id}/installment/${i}/proof`)}

@@ -110,10 +110,13 @@ const Reports = () => {
     }
   }, [reportType, selectedDate, selectedWeek, selectedMonth, dateRange, groupBy, selectedTruck, token]);
 
+  // Format currency - reports always show in RWF
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-RW', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'RWF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount || 0);
   };
 
@@ -286,6 +289,33 @@ const Reports = () => {
           <h1>Reports & Analytics</h1>
           <p>View comprehensive reports and analytics for your truck operations</p>
         </div>
+
+        {/* Exchange Rates Display */}
+        {reportData && (reportData.summary?.exchangeRates || reportData.overall?.exchangeRates) && (
+          <div className="exchange-rates-banner" style={{
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '24px'
+          }}>
+            <h4 style={{ margin: '0 0 12px 0', color: '#0369a1', fontSize: '1rem', fontWeight: '600' }}>
+              Exchange Rates Used (All amounts converted to RWF)
+            </h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              {Object.entries(reportData.summary?.exchangeRates || reportData.overall?.exchangeRates || {}).map(([currency, rate]) => (
+                <div key={currency} style={{
+                  background: 'white',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #e0f2fe'
+                }}>
+                  <strong>{currency}:</strong> 1 {currency} = {parseFloat(rate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RWF
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="reports-controls">
           <div className="report-type-selector">
