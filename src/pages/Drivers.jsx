@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { createApiUrl, createAuthHeaders } from '../utils/apiConfig';
+import { parseValidationErrors, getGeneralError } from '../utils/formErrorHandler';
 import Sidebar from '../components/Sidebar';
 import MobileHeader from '../components/MobileHeader';
 import './Drivers.css';
@@ -259,14 +260,10 @@ const Drivers = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.errors && Array.isArray(data.errors)) {
-          // Parse Joi validation errors
-          const errors = {};
-          data.errors.forEach(error => {
-            const field = error.path ? error.path[0] : 'general';
-            errors[field] = error.message;
-          });
-          setFieldErrors(errors);
+        const fieldErrors = parseValidationErrors(data);
+        if (Object.keys(fieldErrors).length > 0) {
+          setFieldErrors(fieldErrors);
+          setError(getGeneralError(data));
         } else {
           setError(data.message || 'Failed to create driver');
         }
@@ -314,14 +311,10 @@ const Drivers = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.errors && Array.isArray(data.errors)) {
-          // Parse Joi validation errors
-          const errors = {};
-          data.errors.forEach(error => {
-            const field = error.path ? error.path[0] : 'general';
-            errors[field] = error.message;
-          });
-          setFieldErrors(errors);
+        const fieldErrors = parseValidationErrors(data);
+        if (Object.keys(fieldErrors).length > 0) {
+          setFieldErrors(fieldErrors);
+          setError(getGeneralError(data));
         } else {
           setError(data.message || 'Failed to update driver');
         }

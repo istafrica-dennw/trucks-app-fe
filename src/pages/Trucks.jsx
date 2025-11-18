@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { createApiUrl, createAuthHeaders } from '../utils/apiConfig';
+import { parseValidationErrors, getGeneralError } from '../utils/formErrorHandler';
 import Sidebar from '../components/Sidebar';
 import MobileHeader from '../components/MobileHeader';
 import './Trucks.css';
@@ -199,29 +200,11 @@ const Trucks = () => {
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Handle Joi validation errors
-        if (errorData.errors && Array.isArray(errorData.errors)) {
-          const fieldErrorsObj = {};
-          const generalErrors = [];
-          
-          errorData.errors.forEach(error => {
-            // Extract field name from error path (e.g., "vin" from "vin is not allowed to be empty")
-            const fieldMatch = error.message.match(/^"([^"]+)"\s/);
-            if (fieldMatch) {
-              const fieldName = fieldMatch[1];
-              fieldErrorsObj[fieldName] = error.message;
-            } else {
-              generalErrors.push(error.message);
-            }
-          });
-          
-          setFieldErrors(fieldErrorsObj);
-          
-          if (generalErrors.length > 0) {
-            throw new Error(generalErrors.join('\n'));
-          } else {
-            throw new Error('Please fix the validation errors below');
-          }
+        // Handle validation errors
+        const fieldErrors = parseValidationErrors(errorData);
+        if (Object.keys(fieldErrors).length > 0) {
+          setFieldErrors(fieldErrors);
+          throw new Error(getGeneralError(errorData));
         }
         
         throw new Error(errorData.message || 'Failed to create truck');
@@ -275,29 +258,11 @@ const Trucks = () => {
       if (!response.ok) {
         const errorData = await response.json();
         
-        // Handle Joi validation errors
-        if (errorData.errors && Array.isArray(errorData.errors)) {
-          const fieldErrorsObj = {};
-          const generalErrors = [];
-          
-          errorData.errors.forEach(error => {
-            // Extract field name from error path (e.g., "vin" from "vin is not allowed to be empty")
-            const fieldMatch = error.message.match(/^"([^"]+)"\s/);
-            if (fieldMatch) {
-              const fieldName = fieldMatch[1];
-              fieldErrorsObj[fieldName] = error.message;
-            } else {
-              generalErrors.push(error.message);
-            }
-          });
-          
-          setFieldErrors(fieldErrorsObj);
-          
-          if (generalErrors.length > 0) {
-            throw new Error(generalErrors.join('\n'));
-          } else {
-            throw new Error('Please fix the validation errors below');
-          }
+        // Handle validation errors
+        const fieldErrors = parseValidationErrors(errorData);
+        if (Object.keys(fieldErrors).length > 0) {
+          setFieldErrors(fieldErrors);
+          throw new Error(getGeneralError(errorData));
         }
         
         throw new Error(errorData.message || 'Failed to update truck');
@@ -829,7 +794,7 @@ const Trucks = () => {
                   {renderFieldError('insuranceExpiry')}
                 </div>
                 <div className="form-group">
-                  <label htmlFor="registrationExpiry">Registration Expiry</label>
+                  <label htmlFor="registrationExpiry">Vehicle Inspection Expiry</label>
                   <input
                     type="date"
                     id="registrationExpiry"
@@ -1059,7 +1024,7 @@ const Trucks = () => {
                   {renderFieldError('insuranceExpiry')}
                 </div>
                 <div className="form-group">
-                  <label htmlFor="edit-registrationExpiry">Registration Expiry</label>
+                  <label htmlFor="edit-registrationExpiry">Vehicle Inspection Expiry</label>
                   <input
                     type="date"
                     id="edit-registrationExpiry"
