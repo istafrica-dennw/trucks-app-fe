@@ -20,6 +20,9 @@ const Trucks = () => {
   const [truckToDelete, setTruckToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingTrucks, setDeletingTrucks] = useState({});
+  const [truckJourneys, setTruckJourneys] = useState([]);
+  const [loadingJourneys, setLoadingJourneys] = useState(false);
+  const [journeysLoaded, setJourneysLoaded] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
     pages: 1,
@@ -309,12 +312,35 @@ const Trucks = () => {
     }
   };
 
+  // Fetch truck journeys
+  const fetchTruckJourneys = async (truckId) => {
+    try {
+      setLoadingJourneys(true);
+      const response = await fetch(createApiUrl(`api/drives/by-truck/${truckId}?limit=50`), {
+        headers: createAuthHeaders(token)
+      });
+      if (!response.ok) throw new Error('Failed to fetch truck journeys');
+      const data = await response.json();
+      setTruckJourneys(data.data || []);
+      setJourneysLoaded(true);
+    } catch (err) {
+      console.error('Error fetching truck journeys:', err);
+      setTruckJourneys([]);
+      setError('Failed to load journeys');
+    } finally {
+      setLoadingJourneys(false);
+    }
+  };
+
   // Handle view details click
   const handleViewDetailsClick = async (truckId) => {
     const truckDetails = await fetchTruckDetails(truckId);
     if (truckDetails) {
       setSelectedTruck(truckDetails);
       setShowDetailsModal(true);
+      // Reset journeys state when opening details
+      setTruckJourneys([]);
+      setJourneysLoaded(false);
     }
   };
 
@@ -377,6 +403,17 @@ const Trucks = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Format currency
+  const formatCurrency = (amount, currency = 'RWF') => {
+    if (typeof amount !== 'number') return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   // Render field error
@@ -1147,6 +1184,78 @@ const Trucks = () => {
                   <span className="detail-value">{formatDate(selectedTruck.updatedAt)}</span>
                 </div>
               </div>
+
+              {!journeysLoaded && (
+                <div className="detail-section" style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <button
+                    type="button"
+                    onClick={() => fetchTruckJourneys(selectedTruck._id)}
+                    className="btn-primary"
+                    disabled={loadingJourneys}
+                  >
+                    {loadingJourneys ? 'Loading...' : 'Load Journeys'}
+                  </button>
+                </div>
+              )}
+
+              {journeysLoaded && (
+                <div className="detail-section">
+                  <h4>Associated Journeys ({truckJourneys.length})</h4>
+                  {loadingJourneys ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+                      <p>Loading journeys...</p>
+                    </div>
+                  ) : truckJourneys.length === 0 ? (
+                    <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>No journeys found for this truck.</p>
+                  ) : (
+                    <div className="journeys-list">
+                      {truckJourneys.map((journey) => (
+                        <div key={journey._id} className="journey-item">
+                          <div className="journey-item-header">
+                            <div className="journey-route">
+                              <strong>{journey.departureCity} → {journey.destinationCity}</strong>
+                            </div>
+                            <span className={getStatusBadgeClass(journey.status || 'active')}>
+                              {journey.status || 'active'}
+                            </span>
+                          </div>
+                          <div className="journey-item-details">
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Date:</span>
+                              <span className="journey-detail-value">{formatDate(journey.date)}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Driver:</span>
+                              <span className="journey-detail-value">{journey.driver?.fullName || 'N/A'}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Customer:</span>
+                              <span className="journey-detail-value">{journey.customer?.name || journey.customer || 'N/A'}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Cargo:</span>
+                              <span className="journey-detail-value">{journey.cargo}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Amount:</span>
+                              <span className="journey-detail-value">
+                                {formatCurrency(journey.pay?.totalAmount || 0, journey.pay?.currency || 'RWF')}
+                              </span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Payment:</span>
+                              <span className="journey-detail-value">
+                                {journey.pay?.paidOption === 'full' ? 'Full Payment' : 'Installment'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="modal-actions">

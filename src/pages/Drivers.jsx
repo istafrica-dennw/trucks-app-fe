@@ -20,6 +20,9 @@ const Drivers = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [driverToDelete, setDriverToDelete] = useState(null);
+  const [driverJourneys, setDriverJourneys] = useState([]);
+  const [loadingJourneys, setLoadingJourneys] = useState(false);
+  const [journeysLoaded, setJourneysLoaded] = useState(false);
   
   // Form states
   const [submitting, setSubmitting] = useState(false);
@@ -150,12 +153,35 @@ const Drivers = () => {
     }
   };
 
+  // Fetch driver journeys
+  const fetchDriverJourneys = async (driverId) => {
+    try {
+      setLoadingJourneys(true);
+      const response = await fetch(createApiUrl(`api/drives/by-driver/${driverId}?limit=50`), {
+        headers: createAuthHeaders(token)
+      });
+      if (!response.ok) throw new Error('Failed to fetch driver journeys');
+      const data = await response.json();
+      setDriverJourneys(data.data || []);
+      setJourneysLoaded(true);
+    } catch (err) {
+      console.error('Error fetching driver journeys:', err);
+      setDriverJourneys([]);
+      setError('Failed to load journeys');
+    } finally {
+      setLoadingJourneys(false);
+    }
+  };
+
   // Handle view details click
   const handleViewDetailsClick = async (driver) => {
     try {
       const driverDetails = await fetchDriverDetails(driver._id);
       setSelectedDriver(driverDetails);
       setShowDetailsModal(true);
+      // Reset journeys state when opening details
+      setDriverJourneys([]);
+      setJourneysLoaded(false);
     } catch (err) {
       setError('Failed to load driver details');
     }
@@ -321,6 +347,8 @@ const Drivers = () => {
     setShowEditModal(false);
     setShowDetailsModal(false);
     setSelectedDriver(null);
+    setDriverJourneys([]);
+    setJourneysLoaded(false);
     setError(null);
     setFieldErrors({});
   };
@@ -345,6 +373,17 @@ const Drivers = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  // Format currency
+  const formatCurrency = (amount, currency = 'RWF') => {
+    if (typeof amount !== 'number') return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   // Get status badge class
@@ -847,6 +886,78 @@ const Drivers = () => {
                   <span className="detail-value">{selectedDriver.address}</span>
                 </div>
               </div>
+
+              {!journeysLoaded && (
+                <div className="detail-section" style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <button
+                    type="button"
+                    onClick={() => fetchDriverJourneys(selectedDriver._id)}
+                    className="btn-primary"
+                    disabled={loadingJourneys}
+                  >
+                    {loadingJourneys ? 'Loading...' : 'Load Journeys'}
+                  </button>
+                </div>
+              )}
+
+              {journeysLoaded && (
+                <div className="detail-section">
+                  <h3>Associated Journeys ({driverJourneys.length})</h3>
+                  {loadingJourneys ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
+                      <p>Loading journeys...</p>
+                    </div>
+                  ) : driverJourneys.length === 0 ? (
+                    <p style={{ color: '#666', textAlign: 'center', padding: '20px' }}>No journeys found for this driver.</p>
+                  ) : (
+                    <div className="journeys-list">
+                      {driverJourneys.map((journey) => (
+                        <div key={journey._id} className="journey-item">
+                          <div className="journey-item-header">
+                            <div className="journey-route">
+                              <strong>{journey.departureCity} → {journey.destinationCity}</strong>
+                            </div>
+                            <span className={getStatusBadgeClass(journey.status || 'active')}>
+                              {journey.status || 'active'}
+                            </span>
+                          </div>
+                          <div className="journey-item-details">
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Date:</span>
+                              <span className="journey-detail-value">{formatDate(journey.date)}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Truck:</span>
+                              <span className="journey-detail-value">{journey.truck?.plateNumber || 'N/A'}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Customer:</span>
+                              <span className="journey-detail-value">{journey.customer?.name || journey.customer || 'N/A'}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Cargo:</span>
+                              <span className="journey-detail-value">{journey.cargo}</span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Amount:</span>
+                              <span className="journey-detail-value">
+                                {formatCurrency(journey.pay?.totalAmount || 0, journey.pay?.currency || 'RWF')}
+                              </span>
+                            </div>
+                            <div className="journey-detail-row">
+                              <span className="journey-detail-label">Payment:</span>
+                              <span className="journey-detail-value">
+                                {journey.pay?.paidOption === 'full' ? 'Full Payment' : 'Installment'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="modal-actions">

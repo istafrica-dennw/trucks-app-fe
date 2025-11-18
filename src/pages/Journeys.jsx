@@ -6,11 +6,12 @@ import MobileHeader from '../components/MobileHeader';
 import './Journeys.css';
 
 const Journeys = () => {
-  const { token, user, isAdmin } = useAuth();
+  const { token, user, isAdminOrOfficer } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [journeys, setJourneys] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [trucks, setTrucks] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [defaultExchangeRates, setDefaultExchangeRates] = useState({
     USD: 1200,
     RWF: 1,
@@ -209,6 +210,19 @@ const Journeys = () => {
   };
 
   // Fetch drivers and trucks for dropdowns
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch(createApiUrl('api/customers?limit=1000'), {
+        headers: createAuthHeaders(token)
+      });
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      const data = await response.json();
+      setCustomers(data.data || []);
+    } catch (err) {
+      console.error('Error fetching customers:', err);
+    }
+  };
+
   const fetchDriversAndTrucks = async () => {
     try {
         const [driversResponse, trucksResponse] = await Promise.all([
@@ -672,7 +686,7 @@ const Journeys = () => {
         formData.append('departureCity', selectedJourney.departureCity);
         formData.append('destinationCity', selectedJourney.destinationCity);
         formData.append('cargo', selectedJourney.cargo);
-        formData.append('customer', selectedJourney.customer);
+        formData.append('customer', selectedJourney.customer?._id || selectedJourney.customer);
         formData.append('notes', selectedJourney.notes || '');
         formData.append('status', selectedJourney.status);
         formData.append('date', selectedJourney.date);
@@ -710,7 +724,7 @@ const Journeys = () => {
         departureCity: selectedJourney.departureCity,
         destinationCity: selectedJourney.destinationCity,
         cargo: selectedJourney.cargo,
-        customer: selectedJourney.customer,
+        customer: selectedJourney.customer?._id || selectedJourney.customer,
         notes: selectedJourney.notes,
         status: selectedJourney.status,
         date: selectedJourney.date,
@@ -969,6 +983,7 @@ const Journeys = () => {
     if (token) {
       fetchJourneys();
       fetchDriversAndTrucks();
+      fetchCustomers();
       fetchDefaultExchangeRates();
     }
   }, [token]);
@@ -997,7 +1012,7 @@ const Journeys = () => {
         <div className="journeys-content">
           <div className="journeys-header">
             <h1>Journeys</h1>
-            {user?.role === 'admin' && (
+            {isAdminOrOfficer() && (
               <button 
                 className="add-journey-btn"
                 onClick={handleAddJourneyClick}
@@ -1086,7 +1101,7 @@ const Journeys = () => {
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Customer:</span>
-                    <span className="detail-value">{journey.customer}</span>
+                    <span className="detail-value">{journey.customer?.name || journey.customer || 'N/A'}</span>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label">Cargo:</span>
@@ -1123,7 +1138,7 @@ const Journeys = () => {
                   >
                     View Details
                   </button>
-                  {user?.role === 'admin' && (
+                  {isAdminOrOfficer() && (
                     <>
                       {journey.status !== 'completed' && (
                         <button
@@ -1287,14 +1302,20 @@ const Journeys = () => {
                 
                 <div className="form-group">
                   <label htmlFor="customer">Customer *</label>
-                  <input
-                    type="text"
+                  <select
                     id="customer"
                     name="customer"
                     value={newJourney.customer}
                     onChange={handleInputChange}
                     required
-                  />
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map(customer => (
+                      <option key={customer._id} value={customer._id}>
+                        {customer.name} - {customer.phone} ({customer.country})
+                      </option>
+                    ))}
+                  </select>
                   {renderFieldError('customer')}
                 </div>
               </div>
@@ -1624,7 +1645,7 @@ const Journeys = () => {
             <form onSubmit={handleAddInstallment} className="installment-form">
               <div className="journey-info">
                 <p><strong>Journey:</strong> {selectedJourney.departureCity} → {selectedJourney.destinationCity}</p>
-                <p><strong>Customer:</strong> {selectedJourney.customer}</p>
+                <p><strong>Customer:</strong> {selectedJourney.customer?.name || selectedJourney.customer || 'N/A'}</p>
                 <p><strong>Total Amount:</strong> {formatCurrency(selectedJourney.pay.totalAmount, selectedJourney.pay.currency || 'RWF')}</p>
                 <p><strong>Paid So Far:</strong> {formatCurrency(selectedJourney.totalPaid || 0, selectedJourney.pay.currency || 'RWF')}</p>
                 <p><strong>Remaining:</strong> {formatCurrency(selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0), selectedJourney.pay.currency || 'RWF')}</p>
@@ -1845,14 +1866,20 @@ const Journeys = () => {
 
                 <div className="form-group">
                   <label htmlFor="edit-customer">Customer *</label>
-                  <input
-                    type="text"
+                  <select
                     id="edit-customer"
                     name="customer"
-                    value={selectedJourney.customer || ''}
+                    value={selectedJourney.customer?._id || selectedJourney.customer || ''}
                     onChange={handleInputChange}
                     required
-                  />
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map(customer => (
+                      <option key={customer._id} value={customer._id}>
+                        {customer.name} - {customer.phone} ({customer.country})
+                      </option>
+                    ))}
+                  </select>
                   {renderFieldError('customer')}
                 </div>
               </div>
@@ -2220,7 +2247,7 @@ const Journeys = () => {
               <div className="detail-row"><span className="detail-label">Date</span><span className="detail-value">{formatDate(selectedJourney.date)}</span></div>
               <div className="detail-row"><span className="detail-label">Driver</span><span className="detail-value">{selectedJourney.driver?.fullName || 'N/A'}</span></div>
               <div className="detail-row"><span className="detail-label">Truck</span><span className="detail-value">{selectedJourney.truck?.plateNumber || 'N/A'}</span></div>
-              <div className="detail-row"><span className="detail-label">Customer</span><span className="detail-value">{selectedJourney.customer}</span></div>
+              <div className="detail-row"><span className="detail-label">Customer</span><span className="detail-value">{selectedJourney.customer?.name || selectedJourney.customer || 'N/A'}</span></div>
               <div className="detail-row"><span className="detail-label">Cargo</span><span className="detail-value">{selectedJourney.cargo}</span></div>
               <div className="detail-row">
                 <span className="detail-label">Payment</span>
@@ -2511,7 +2538,7 @@ const Journeys = () => {
                 <p>Are you sure you want to delete this journey?</p>
                 <div className="journey-info">
                   <strong>{journeyToDelete.departureCity} → {journeyToDelete.destinationCity}</strong>
-                  <span>{journeyToDelete.customer}</span>
+                  <span>{journeyToDelete.customer?.name || journeyToDelete.customer || 'N/A'}</span>
                 </div>
               </div>
               <p className="delete-warning-text">

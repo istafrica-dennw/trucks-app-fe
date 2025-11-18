@@ -66,6 +66,17 @@ const Sidebar = ({ isOpen, onClose }) => {
       adminOnly: false
     },
     {
+      id: 'customers',
+      label: 'Customers',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7ZM12 13C15.3137 13 18 15.6863 18 19V21H6V19C6 15.6863 8.68629 13 12 13Z" fill="currentColor"/>
+        </svg>
+      ),
+      path: isAdminOrOfficer() ? '/admin/customers' : '/customers',
+      adminOnly: false
+    },
+    {
       id: 'journeys',
       label: 'Journeys',
       icon: (

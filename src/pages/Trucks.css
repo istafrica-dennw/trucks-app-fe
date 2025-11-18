@@ -830,3 +830,74 @@
     padding: 16px 20px;
   }
 }
+
+/* Journeys List Styles */
+.journeys-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+
+.journey-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.journey-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.journey-route {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+}
+
+.journey-item-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.journey-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.journey-detail-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.journey-detail-value {
+  color: #1a1a1a;
+  text-align: right;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f0f0f0;
+  border-top: 4px solid #4285F4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .journey-item-details {
+    grid-template-columns: 1fr;
+  }
+}

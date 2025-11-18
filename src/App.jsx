@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Users from './pages/Users';
 import Trucks from './pages/Trucks';
 import Drivers from './pages/Drivers';
+import Customers from './pages/Customers';
 import Journeys from './pages/Journeys';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -98,6 +99,14 @@ const AppRoutes = () => {
         } 
       />
       <Route 
+        path="/admin/customers" 
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <Customers />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/admin/journeys" 
         element={
           <ProtectedRoute requireAdmin={true}>
@@ -128,6 +137,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Drivers />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/customers" 
+        element={
+          <ProtectedRoute>
+            <Customers />
           </ProtectedRoute>
         } 
       />

@@ -53,6 +53,20 @@ const Reports = () => {
   };
 
   const fetchReport = async () => {
+    // Validate required fields before fetching
+    if (reportType === 'weekly' && !selectedWeek) {
+      return; // Skip fetch if required field is missing
+    }
+    if (reportType === 'monthly' && !selectedMonth) {
+      return; // Skip fetch if required field is missing
+    }
+    if (reportType === 'daily' && !selectedDate) {
+      return; // Skip fetch if required field is missing
+    }
+    if (reportType === 'custom' && (!dateRange.startDate || !dateRange.endDate)) {
+      return; // Skip fetch if required fields are missing
+    }
+
     setLoading(true);
     setError(null);
     
@@ -143,13 +157,17 @@ const Reports = () => {
   };
 
   useEffect(() => {
+    // Set default values immediately when report type changes
     if (reportType === 'weekly' && !selectedWeek) {
       setSelectedWeek(getCurrentWeek());
     }
     if (reportType === 'monthly' && !selectedMonth) {
       setSelectedMonth(getCurrentMonth());
     }
-  }, [reportType, selectedWeek, selectedMonth]);
+    if (reportType === 'daily' && !selectedDate) {
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [reportType]); // Only depend on reportType to set defaults immediately
 
   // Export CSV helpers
   const buildCsv = () => {
