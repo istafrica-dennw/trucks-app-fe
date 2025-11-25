@@ -42,3 +42,4 @@ export const getGeneralError = (errorData) => {
   return errorData.message || 'An error occurred';
 };
 
+

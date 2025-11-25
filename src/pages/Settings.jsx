@@ -48,14 +48,54 @@ const Settings = () => {
   };
 
   const handleInputChange = (currency, value) => {
-    const numValue = parseFloat(value);
-    if (isNaN(numValue) || numValue <= 0) {
+    // Allow empty string for clearing the field
+    if (value === '' || value === null || value === undefined) {
+      setExchangeRates(prev => ({
+        ...prev,
+        [currency]: ''
+      }));
       return;
     }
-    setExchangeRates(prev => ({
-      ...prev,
-      [currency]: numValue
-    }));
+    
+    // Allow typing numbers (including decimals and negative for intermediate states)
+    const numValue = parseFloat(value);
+    
+    // Only update if it's a valid number, otherwise keep the string value for typing
+    if (!isNaN(numValue)) {
+      setExchangeRates(prev => ({
+        ...prev,
+        [currency]: numValue
+      }));
+    } else {
+      // Allow partial input while typing (e.g., "1.", "-", etc.)
+      // Store as string temporarily
+      setExchangeRates(prev => ({
+        ...prev,
+        [currency]: value
+      }));
+    }
+  };
+
+  const handleInputBlur = (currency, value) => {
+    // Validate on blur - ensure we have a valid number
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || numValue <= 0) {
+      // Reset to previous valid value or default
+      setExchangeRates(prev => {
+        const current = prev[currency];
+        const defaultRates = { USD: 1200, RWF: 1, UGX: 3.2, TZX: 0.52 };
+        return {
+          ...prev,
+          [currency]: typeof current === 'number' ? current : defaultRates[currency]
+        };
+      });
+    } else {
+      // Ensure it's stored as a number
+      setExchangeRates(prev => ({
+        ...prev,
+        [currency]: numValue
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -64,6 +104,20 @@ const Settings = () => {
     setError(null);
     setSuccess(null);
 
+    // Validate all rates before submitting
+    const validatedRates = {};
+    const defaultRates = { USD: 1200, RWF: 1, UGX: 3.2, TZX: 0.52 };
+    
+    Object.keys(exchangeRates).forEach(currency => {
+      const value = exchangeRates[currency];
+      const numValue = parseFloat(value);
+      if (isNaN(numValue) || numValue <= 0) {
+        validatedRates[currency] = defaultRates[currency];
+      } else {
+        validatedRates[currency] = numValue;
+      }
+    });
+
     try {
       const response = await fetch(createApiUrl('api/settings/exchange-rates'), {
         method: 'PUT',
@@ -71,7 +125,7 @@ const Settings = () => {
           ...createAuthHeaders(token),
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ exchangeRates })
+        body: JSON.stringify({ exchangeRates: validatedRates })
       });
 
       const data = await response.json();
@@ -161,6 +215,7 @@ const Settings = () => {
                       id="usd-rate"
                       value={exchangeRates.USD}
                       onChange={(e) => handleInputChange('USD', e.target.value)}
+                      onBlur={(e) => handleInputBlur('USD', e.target.value)}
                       step="0.01"
                       min="0.01"
                       required
@@ -182,6 +237,7 @@ const Settings = () => {
                       id="rwf-rate"
                       value={exchangeRates.RWF}
                       onChange={(e) => handleInputChange('RWF', e.target.value)}
+                      onBlur={(e) => handleInputBlur('RWF', e.target.value)}
                       step="0.01"
                       min="0.01"
                       required
@@ -203,6 +259,7 @@ const Settings = () => {
                       id="ugx-rate"
                       value={exchangeRates.UGX}
                       onChange={(e) => handleInputChange('UGX', e.target.value)}
+                      onBlur={(e) => handleInputBlur('UGX', e.target.value)}
                       step="0.01"
                       min="0.01"
                       required
@@ -224,6 +281,7 @@ const Settings = () => {
                       id="tzx-rate"
                       value={exchangeRates.TZX}
                       onChange={(e) => handleInputChange('TZX', e.target.value)}
+                      onBlur={(e) => handleInputBlur('TZX', e.target.value)}
                       step="0.01"
                       min="0.01"
                       required

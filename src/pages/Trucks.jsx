@@ -163,8 +163,34 @@ const Trucks = () => {
 
   // Handle input change for new truck
   const handleInputChange = (e) => {
+    const { name, value, type } = e.target;
+    
+    // For number inputs, allow typing (keep as string while typing)
+    if (type === 'number') {
+      // Allow empty string, numbers, and partial numbers (e.g., "1.", "-")
+      if (value === '' || value === null || value === undefined) {
+        setNewTruck(prev => ({ ...prev, [name]: '' }));
+        return;
+      }
+      // Allow the value as-is while typing (will be validated on blur/submit)
+      setNewTruck(prev => ({ ...prev, [name]: value }));
+    } else {
+      setNewTruck(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handle number input blur to convert to number
+  const handleNumberBlur = (e) => {
     const { name, value } = e.target;
-    setNewTruck(prev => ({ ...prev, [name]: value }));
+    const numValue = value === '' ? '' : parseFloat(value);
+    
+    if (value !== '' && (isNaN(numValue) || numValue < 0)) {
+      // Reset to empty if invalid
+      setNewTruck(prev => ({ ...prev, [name]: '' }));
+    } else if (value !== '') {
+      // Convert to number
+      setNewTruck(prev => ({ ...prev, [name]: numValue }));
+    }
   };
 
   // Handle submit new truck
@@ -678,6 +704,7 @@ const Trucks = () => {
                     name="year"
                     value={newTruck.year}
                     onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
                     required
                     min="1900"
                     max={new Date().getFullYear() + 1}
@@ -692,6 +719,7 @@ const Trucks = () => {
                     name="capacity"
                     value={newTruck.capacity}
                     onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
                     required
                     min="1"
                     placeholder="5000"
@@ -737,6 +765,7 @@ const Trucks = () => {
                     name="mileage"
                     value={newTruck.mileage}
                     onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
                     min="0"
                     placeholder="25000"
                   />
@@ -912,7 +941,17 @@ const Trucks = () => {
                     id="edit-year"
                     name="year"
                     value={selectedTruck.year}
-                    onChange={(e) => setSelectedTruck({...selectedTruck, year: parseInt(e.target.value)})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedTruck({...selectedTruck, year: value === '' ? '' : value});
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? '' : parseInt(value);
+                      if (value !== '' && !isNaN(numValue)) {
+                        setSelectedTruck({...selectedTruck, year: numValue});
+                      }
+                    }}
                     required
                     min="1900"
                     max={new Date().getFullYear() + 1}
@@ -925,7 +964,17 @@ const Trucks = () => {
                     id="edit-capacity"
                     name="capacity"
                     value={selectedTruck.capacity}
-                    onChange={(e) => setSelectedTruck({...selectedTruck, capacity: parseInt(e.target.value)})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedTruck({...selectedTruck, capacity: value === '' ? '' : value});
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? '' : parseInt(value);
+                      if (value !== '' && !isNaN(numValue)) {
+                        setSelectedTruck({...selectedTruck, capacity: numValue});
+                      }
+                    }}
                     required
                     min="1"
                   />
@@ -968,7 +1017,17 @@ const Trucks = () => {
                     id="edit-mileage"
                     name="mileage"
                     value={selectedTruck.mileage || ''}
-                    onChange={(e) => setSelectedTruck({...selectedTruck, mileage: parseInt(e.target.value) || null})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedTruck({...selectedTruck, mileage: value === '' ? '' : value});
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? null : parseInt(value);
+                      if (value === '' || !isNaN(numValue)) {
+                        setSelectedTruck({...selectedTruck, mileage: numValue});
+                      }
+                    }}
                     min="0"
                   />
                 </div>

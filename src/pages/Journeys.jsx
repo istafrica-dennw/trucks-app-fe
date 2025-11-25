@@ -330,8 +330,21 @@ const Journeys = () => {
 
   // Handle edit journey click
   const handleEditJourneyClick = async (journey) => {
+    // Prevent editing completed journeys
+    if (journey.status === 'completed') {
+      setError('Cannot edit a completed journey');
+      return;
+    }
+    
     try {
       const journeyDetails = await fetchJourneyDetails(journey._id);
+      
+      // Double check status after fetching details
+      if (journeyDetails.status === 'completed') {
+        setError('Cannot edit a completed journey');
+        return;
+      }
+      
       setSelectedJourney(journeyDetails);
       setError(null);
       setFieldErrors({});
@@ -408,23 +421,27 @@ const Journeys = () => {
 
   // Handle input change
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    
+    // For number inputs, allow typing (keep as string while typing)
+    const processedValue = type === 'number' ? (value === '' ? '' : value) : value;
+    
     if (showAddModal) {
       if (name.startsWith('pay.')) {
         const payField = name.split('.')[1];
         if (payField === 'paidOption') {
           setNewJourney(prev => ({
             ...prev,
-            pay: { ...prev.pay, paidOption: value, installments: value === 'full' ? [] : prev.pay.installments }
+            pay: { ...prev.pay, paidOption: processedValue, installments: processedValue === 'full' ? [] : prev.pay.installments }
           }));
         } else {
           setNewJourney(prev => ({
             ...prev,
-            pay: { ...prev.pay, [payField]: value }
+            pay: { ...prev.pay, [payField]: processedValue }
           }));
         }
       } else {
-        setNewJourney(prev => ({ ...prev, [name]: value }));
+        setNewJourney(prev => ({ ...prev, [name]: processedValue }));
       }
     } else if (showEditModal && selectedJourney) {
       if (name.startsWith('pay.')) {
@@ -432,19 +449,19 @@ const Journeys = () => {
         if (payField === 'paidOption') {
           setSelectedJourney(prev => ({
             ...prev,
-            pay: { ...prev.pay, paidOption: value, installments: value === 'full' ? [] : prev.pay.installments }
+            pay: { ...prev.pay, paidOption: processedValue, installments: processedValue === 'full' ? [] : prev.pay.installments }
           }));
         } else {
           setSelectedJourney(prev => ({
             ...prev,
-            pay: { ...prev.pay, [payField]: value }
+            pay: { ...prev.pay, [payField]: processedValue }
           }));
         }
       } else {
-        setSelectedJourney(prev => ({ ...prev, [name]: value }));
+        setSelectedJourney(prev => ({ ...prev, [name]: processedValue }));
       }
     } else if (showInstallmentModal) {
-      setNewInstallment(prev => ({ ...prev, [name]: value }));
+      setNewInstallment(prev => ({ ...prev, [name]: processedValue }));
     }
     
     // Clear field error when user starts typing
@@ -453,21 +470,121 @@ const Journeys = () => {
     }
   };
 
+  // Handle number input blur to convert to number
+  const handleNumberBlur = (e) => {
+    const { name, value } = e.target;
+    const numValue = value === '' ? '' : parseFloat(value);
+    
+    if (value !== '' && isNaN(numValue)) {
+      // Keep as empty if invalid
+      return;
+    }
+    
+    if (showAddModal) {
+      if (name.startsWith('pay.')) {
+        const payField = name.split('.')[1];
+        if (payField === 'totalAmount' || payField === 'exchangeRate') {
+          setNewJourney(prev => ({
+            ...prev,
+            pay: { ...prev.pay, [payField]: numValue }
+          }));
+        }
+      } else {
+        setNewJourney(prev => ({ ...prev, [name]: numValue }));
+      }
+    } else if (showEditModal && selectedJourney) {
+      if (name.startsWith('pay.')) {
+        const payField = name.split('.')[1];
+        if (payField === 'totalAmount' || payField === 'exchangeRate') {
+          setSelectedJourney(prev => ({
+            ...prev,
+            pay: { ...prev.pay, [payField]: numValue }
+          }));
+        }
+      } else {
+        setSelectedJourney(prev => ({ ...prev, [name]: numValue }));
+      }
+    } else if (showInstallmentModal) {
+      if (name === 'amount') {
+        setNewInstallment(prev => ({ ...prev, [name]: numValue }));
+      }
+    }
+  };
+
   // Handle expense change
   const handleExpenseChange = (index, field, value) => {
+    // For amount field, allow typing as string
+    const processedValue = field === 'amount' ? (value === '' ? '' : value) : value;
+    
     if (showAddModal) {
       setNewJourney(prev => ({
         ...prev,
         expenses: prev.expenses.map((expense, i) => 
-          i === index ? { ...expense, [field]: value } : expense
+          i === index ? { ...expense, [field]: processedValue } : expense
         )
       }));
     } else if (showEditModal && selectedJourney) {
       setSelectedJourney(prev => ({
         ...prev,
         expenses: prev.expenses.map((expense, i) => 
-          i === index ? { ...expense, [field]: value } : expense
+          i === index ? { ...expense, [field]: processedValue } : expense
         )
+      }));
+    }
+  };
+
+  // Handle expense amount blur to convert to number
+  const handleExpenseAmountBlur = (index, value) => {
+    const numValue = value === '' ? '' : parseFloat(value);
+    
+    if (value !== '' && isNaN(numValue)) {
+      return; // Keep as is if invalid
+    }
+    
+    if (showAddModal) {
+      setNewJourney(prev => ({
+        ...prev,
+        expenses: prev.expenses.map((expense, i) => 
+          i === index ? { ...expense, amount: numValue } : expense
+        )
+      }));
+    } else if (showEditModal && selectedJourney) {
+      setSelectedJourney(prev => ({
+        ...prev,
+        expenses: prev.expenses.map((expense, i) => 
+          i === index ? { ...expense, amount: numValue } : expense
+        )
+      }));
+    }
+  };
+
+  // Handle installment amount blur to convert to number
+  const handleInstallmentAmountBlur = (index, value) => {
+    const numValue = value === '' ? '' : parseFloat(value);
+    
+    if (value !== '' && isNaN(numValue)) {
+      return; // Keep as is if invalid
+    }
+    
+    if (showAddModal) {
+      setNewJourney(prev => ({
+        ...prev,
+        pay: {
+          ...prev.pay,
+          installments: prev.pay.installments.map((inst, i) => 
+            i === index ? { ...inst, amount: numValue } : inst
+          )
+        }
+      }));
+    } else if (showEditModal && selectedJourney) {
+      setSelectedJourney(prev => ({
+        ...prev,
+        pay: {
+          ...prev.pay,
+          installments: prev.pay.installments.map((inst, i) => 
+            i === index ? { ...inst, amount: numValue } : inst
+          )
+        }
       }));
     }
   };
@@ -627,6 +744,12 @@ const Journeys = () => {
   const handleUpdateJourney = async (e) => {
     e.preventDefault();
     if (!selectedJourney) return;
+
+    // Prevent updating completed journeys
+    if (selectedJourney.status === 'completed') {
+      setError('Cannot update a completed journey');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -1138,12 +1261,14 @@ const Journeys = () => {
                           {completingJourneys[journey._id] ? 'Completing...' : 'Mark Completed'}
                         </button>
                       )}
-                      <button
-                        className="edit-journey-btn"
-                        onClick={() => handleEditJourneyClick(journey)}
-                      >
-                        Edit
-                      </button>
+                      {journey.status !== 'completed' && (
+                        <button
+                          className="edit-journey-btn"
+                          onClick={() => handleEditJourneyClick(journey)}
+                        >
+                          Edit
+                        </button>
+                      )}
                       {journey.pay.paidOption === 'installment' && (
                         <button
                           className="add-installment-btn"
@@ -1318,6 +1443,7 @@ const Journeys = () => {
                     name="pay.totalAmount"
                     value={newJourney.pay.totalAmount}
                     onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
                     step="0.01"
                     min="0"
                     required
@@ -1363,6 +1489,7 @@ const Journeys = () => {
                       name="pay.exchangeRate"
                       value={newJourney.pay.exchangeRate || 1}
                       onChange={handleInputChange}
+                      onBlur={handleNumberBlur}
                       step="0.01"
                       min="0.01"
                       required
@@ -1478,6 +1605,7 @@ const Journeys = () => {
                         placeholder="Amount"
                         value={inst.amount}
                         onChange={(e) => handleInstallmentChange(index, 'amount', e.target.value)}
+                        onBlur={(e) => handleInstallmentAmountBlur(index, e.target.value)}
                         step="0.01"
                         min="0"
                         className="expense-amount"
@@ -1523,6 +1651,7 @@ const Journeys = () => {
                       placeholder="Amount (RWF)"
                       value={expense.amount}
                       onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
+                      onBlur={(e) => handleExpenseAmountBlur(index, e.target.value)}
                       step="0.01"
                       min="0"
                       className="expense-amount"
@@ -1697,17 +1826,18 @@ const Journeys = () => {
 
               <div className="form-group">
                 <label htmlFor="amount">Amount ({selectedJourney.pay?.currency || 'RWF'}) *</label>
-                <input
-                  type="number"
-                  id="amount"
-                  name="amount"
-                  value={newInstallment.amount}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  min="0"
-                  max={selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0)}
-                  required
-                />
+                  <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    value={newInstallment.amount}
+                    onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
+                    step="0.01"
+                    min="0"
+                    max={selectedJourney.pay.totalAmount - (selectedJourney.totalPaid || 0)}
+                    required
+                  />
                 <small className="form-help">Installment must be in {selectedJourney.pay?.currency || 'RWF'}</small>
                 {renderFieldError('amount')}
               </div>
@@ -1770,7 +1900,13 @@ const Journeys = () => {
               <div className="modal-error-message">{error}</div>
             )}
 
-            <form onSubmit={handleUpdateJourney} className="journey-form">
+            {selectedJourney.status === 'completed' && (
+              <div className="modal-error-message" style={{ backgroundColor: '#fee2e2', color: '#991b1b', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>
+                This journey is completed and cannot be edited. Only the status can be changed back to "started" if needed.
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateJourney} className="journey-form" style={{ opacity: selectedJourney.status === 'completed' ? 0.6 : 1, pointerEvents: selectedJourney.status === 'completed' ? 'none' : 'auto' }}>
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="edit-driver">Driver *</label>
@@ -1882,6 +2018,7 @@ const Journeys = () => {
                     name="pay.totalAmount"
                     value={selectedJourney.pay?.totalAmount ?? ''}
                     onChange={handleInputChange}
+                    onBlur={handleNumberBlur}
                     step="0.01"
                     min="0"
                     required
@@ -1927,6 +2064,7 @@ const Journeys = () => {
                       name="pay.exchangeRate"
                       value={selectedJourney.pay?.exchangeRate || 1}
                       onChange={handleInputChange}
+                      onBlur={handleNumberBlur}
                       step="0.01"
                       min="0.01"
                       required
@@ -2142,6 +2280,7 @@ const Journeys = () => {
                       placeholder="Amount (RWF)"
                       value={expense.amount}
                       onChange={(e) => handleExpenseChange(index, 'amount', e.target.value)}
+                      onBlur={(e) => handleExpenseAmountBlur(index, e.target.value)}
                       step="0.01"
                       min="0"
                       className="expense-amount"
