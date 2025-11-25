@@ -22,6 +22,8 @@ const Reports = () => {
   const [groupBy, setGroupBy] = useState('day');
   const [selectedTruck, setSelectedTruck] = useState('');
   const [trucks, setTrucks] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [customers, setCustomers] = useState([]);
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -46,10 +48,35 @@ const Reports = () => {
     }
   };
 
+  const fetchCustomers = async () => {
+    if (!token) return; // Ensure token exists before fetching
+    try {
+      const response = await fetch(createApiUrl('api/customers'), {
+        headers: createAuthHeaders(token)
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setCustomers(data.data || []);
+      } else {
+        setError(data.message || 'Failed to fetch customers');
+      }
+    } catch (err) {
+      console.error('Failed to fetch customers:', err);
+      setError('Network error or server unreachable.');
+    }
+  };
+
   // Helper to get selected truck plate number
   const getSelectedTruckPlate = () => {
     const t = trucks.find(truck => truck._id === selectedTruck);
     return t ? t.plateNumber : '';
+  };
+
+  // Helper to get selected customer name
+  const getSelectedCustomerName = () => {
+    const c = customers.find(customer => customer._id === selectedCustomer);
+    return c ? c.name : '';
   };
 
   const fetchReport = async () => {
@@ -76,13 +103,22 @@ const Reports = () => {
 
       switch (reportType) {
         case 'daily':
-          url = createApiUrl(`api/reports/daily/${selectedDate}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
+          const dailyParams = new URLSearchParams();
+          if (selectedTruck) dailyParams.append('truckId', selectedTruck);
+          if (selectedCustomer) dailyParams.append('customerId', selectedCustomer);
+          url = createApiUrl(`api/reports/daily/${selectedDate}${dailyParams.toString() ? `?${dailyParams.toString()}` : ''}`);
           break;
         case 'weekly':
-          url = createApiUrl(`api/reports/weekly/${selectedWeek}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
+          const weeklyParams = new URLSearchParams();
+          if (selectedTruck) weeklyParams.append('truckId', selectedTruck);
+          if (selectedCustomer) weeklyParams.append('customerId', selectedCustomer);
+          url = createApiUrl(`api/reports/weekly/${selectedWeek}${weeklyParams.toString() ? `?${weeklyParams.toString()}` : ''}`);
           break;
         case 'monthly':
-          url = createApiUrl(`api/reports/monthly/${selectedMonth}${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
+          const monthlyParams = new URLSearchParams();
+          if (selectedTruck) monthlyParams.append('truckId', selectedTruck);
+          if (selectedCustomer) monthlyParams.append('customerId', selectedCustomer);
+          url = createApiUrl(`api/reports/monthly/${selectedMonth}${monthlyParams.toString() ? `?${monthlyParams.toString()}` : ''}`);
           break;
         case 'custom':
           const params = new URLSearchParams({
@@ -93,10 +129,16 @@ const Reports = () => {
           if (selectedTruck && selectedTruck.trim() !== '') {
             params.append('truckId', selectedTruck);
           }
+          if (selectedCustomer && selectedCustomer.trim() !== '') {
+            params.append('customerId', selectedCustomer);
+          }
           url = createApiUrl(`api/reports/custom?${params.toString()}`);
           break;
         case 'summary':
-          url = createApiUrl(`api/reports/summary${selectedTruck ? `?truckId=${selectedTruck}` : ''}`);
+          const summaryParams = new URLSearchParams();
+          if (selectedTruck) summaryParams.append('truckId', selectedTruck);
+          if (selectedCustomer) summaryParams.append('customerId', selectedCustomer);
+          url = createApiUrl(`api/reports/summary${summaryParams.toString() ? `?${summaryParams.toString()}` : ''}`);
           break;
         default:
           throw new Error('Invalid report type');
@@ -120,6 +162,7 @@ const Reports = () => {
   useEffect(() => {
     if (token) {
       fetchTrucks();
+      fetchCustomers();
     }
   }, [token]);
 
@@ -127,7 +170,7 @@ const Reports = () => {
     if (token) {
       fetchReport();
     }
-  }, [reportType, selectedDate, selectedWeek, selectedMonth, dateRange, groupBy, selectedTruck, token]);
+  }, [reportType, selectedDate, selectedWeek, selectedMonth, dateRange, groupBy, selectedTruck, selectedCustomer, token]);
 
   // Format currency - reports always show in RWF
   const formatCurrency = (amount) => {
@@ -187,6 +230,7 @@ const Reports = () => {
     if (reportType === 'monthly') pushRow(['Month', selectedMonth]);
     if (reportType === 'custom') pushRow(['Range', `${dateRange.startDate} to ${dateRange.endDate}`, 'Group By', groupBy]);
     if (selectedTruck) pushRow(['Truck Plate', getSelectedTruckPlate()]);
+    if (selectedCustomer) pushRow(['Customer', getSelectedCustomerName()]);
     pushRow(['Generated At', new Date().toISOString()]);
     pushRow([]);
 
@@ -198,6 +242,7 @@ const Reports = () => {
       pushRow(['Total Revenue', summary.totalAmount]);
       pushRow(['Total Expenses', summary.totalExpenses]);
       pushRow(['Total Paid', summary.totalPaid]);
+      pushRow(['Balance (Unpaid)', summary.balance || 0]);
       pushRow(['Net Profit', summary.netProfit]);
       pushRow([]);
     }
@@ -205,9 +250,9 @@ const Reports = () => {
     // Breakdown
     if (Array.isArray(reportData.breakdown) && reportData.breakdown.length) {
       pushRow(['Breakdown']);
-      pushRow(['Date', 'Journeys', 'Revenue', 'Expenses', 'Paid', 'Profit']);
+      pushRow(['Date', 'Journeys', 'Revenue', 'Expenses', 'Paid', 'Balance (Unpaid)', 'Profit']);
       reportData.breakdown.forEach(d => {
-        pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.totalPaid, d.netProfit]);
+        pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.totalPaid, d.balance || 0, d.netProfit]);
       });
     }
 
@@ -258,6 +303,12 @@ const Reports = () => {
             <div className="summary-value">{formatCurrency(summary.totalPaid)}</div>
           </div>
           <div className="summary-card">
+            <div className="summary-label">Balance (Unpaid)</div>
+            <div className="summary-value" style={{ color: summary.balance > 0 ? '#dc2626' : '#059669' }}>
+              {formatCurrency(summary.balance || 0)}
+            </div>
+          </div>
+          <div className="summary-card">
             <div className="summary-label">Net Profit</div>
             <div className="summary-value profit">{formatCurrency(summary.netProfit)}</div>
           </div>
@@ -279,6 +330,7 @@ const Reports = () => {
             <div>Revenue</div>
             <div>Expenses</div>
             <div>Paid</div>
+            <div>Balance (Unpaid)</div>
             <div>Profit</div>
           </div>
           {breakdown.map((day, index) => (
@@ -288,6 +340,9 @@ const Reports = () => {
               <div>{formatCurrency(day.totalAmount)}</div>
               <div>{formatCurrency(day.totalExpenses)}</div>
               <div>{formatCurrency(day.totalPaid)}</div>
+              <div className={(day.balance || 0) > 0 ? 'loss' : 'profit'}>
+                {formatCurrency(day.balance || 0)}
+              </div>
               <div className={day.netProfit >= 0 ? 'profit' : 'loss'}>
                 {formatCurrency(day.netProfit)}
               </div>
@@ -367,6 +422,22 @@ const Reports = () => {
               {trucks.map(truck => (
                 <option key={truck._id} value={truck._id}>
                   {truck.plateNumber} - {truck.make} {truck.model}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="customer-selector">
+            <label>Filter by Customer (Optional):</label>
+            <select 
+              value={selectedCustomer} 
+              onChange={(e) => setSelectedCustomer(e.target.value)}
+              className="customer-select"
+            >
+              <option value="">All Customers</option>
+              {customers.map(customer => (
+                <option key={customer._id} value={customer._id}>
+                  {customer.name} - {customer.country}
                 </option>
               ))}
             </select>

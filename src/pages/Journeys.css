@@ -165,7 +165,8 @@
   flex-wrap: wrap;
 }
 
-.filter-select {
+.filter-select,
+.filter-date-input {
   padding: 12px 16px;
   border: 2px solid #e1e5e9;
   border-radius: 8px;
@@ -176,10 +177,16 @@
   min-width: 140px;
 }
 
-.filter-select:focus {
+.filter-select:focus,
+.filter-date-input:focus {
   outline: none;
   border-color: #4285F4;
   box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.filter-date-input {
+  cursor: text;
+  font-family: inherit;
 }
 
 /* Error Message */
@@ -800,8 +807,10 @@
     gap: 8px;
   }
   
-  .filter-select {
+  .filter-select,
+  .filter-date-input {
     min-width: unset;
+    width: 100%;
   }
   
   .journeys-grid {

@@ -83,7 +83,7 @@ const Journeys = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to mark as completed');
       }
-      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -167,12 +167,14 @@ const Journeys = () => {
     departureCity: '',
     destinationCity: '',
     paidOption: '',
+    startDate: '',
+    endDate: '',
     sortBy: 'date',
     sortOrder: 'desc'
   });
 
   // Fetch journeys
-  const fetchJourneys = async (page = 1, limit = 10, search = '', status = '', truckId = '', driverId = '', customer = '', departureCity = '', destinationCity = '', paidOption = '', sortBy = 'date', sortOrder = 'desc') => {
+  const fetchJourneys = async (page = 1, limit = 10, search = '', status = '', truckId = '', driverId = '', customer = '', departureCity = '', destinationCity = '', paidOption = '', startDate = '', endDate = '', sortBy = 'date', sortOrder = 'desc') => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams({
@@ -189,6 +191,13 @@ const Journeys = () => {
         sortBy,
         sortOrder
       });
+      
+      if (startDate) {
+        queryParams.append('startDate', startDate);
+      }
+      if (endDate) {
+        queryParams.append('endDate', endDate);
+      }
 
       const response = await fetch(createApiUrl(`api/drives?${queryParams}`), {
         headers: createAuthHeaders(token)
@@ -289,14 +298,14 @@ const Journeys = () => {
   const handleSearchChange = (e) => {
     const search = e.target.value;
     setFilters(prev => ({ ...prev, search }));
-    fetchJourneys(1, pagination.limit, search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+    fetchJourneys(1, pagination.limit, search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
   };
 
   // Handle filter change
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
-    fetchJourneys(1, pagination.limit, filters.search, name === 'status' ? value : filters.status, name === 'truckId' ? value : filters.truckId, name === 'driverId' ? value : filters.driverId, name === 'customer' ? value : filters.customer, name === 'departureCity' ? value : filters.departureCity, name === 'destinationCity' ? value : filters.destinationCity, name === 'paidOption' ? value : filters.paidOption, filters.sortBy, filters.sortOrder);
+    fetchJourneys(1, pagination.limit, filters.search, name === 'status' ? value : filters.status, name === 'truckId' ? value : filters.truckId, name === 'driverId' ? value : filters.driverId, name === 'customer' ? value : filters.customer, name === 'departureCity' ? value : filters.departureCity, name === 'destinationCity' ? value : filters.destinationCity, name === 'paidOption' ? value : filters.paidOption, name === 'startDate' ? value : filters.startDate, name === 'endDate' ? value : filters.endDate, filters.sortBy, filters.sortOrder);
   };
 
   // Handle page change
@@ -403,7 +412,7 @@ const Journeys = () => {
       }
 
       // Refresh journeys list
-      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
       setShowDeleteModal(false);
       setJourneyToDelete(null);
     } catch (err) {
@@ -732,7 +741,7 @@ const Journeys = () => {
       });
       
       // Refresh journeys list
-      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
     } catch (err) {
       setError('Failed to create journey');
     } finally {
@@ -930,7 +939,7 @@ const Journeys = () => {
       setSelectedJourney(null);
       
       // Refresh journeys list
-      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
     } catch (err) {
       setError('Failed to update journey');
     } finally {
@@ -993,7 +1002,7 @@ const Journeys = () => {
       setNewInstallment({ amount: '', date: '', attachment: null });
       
       // Refresh journeys list
-      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.sortBy, filters.sortOrder);
+      await fetchJourneys(pagination.page, pagination.limit, filters.search, filters.status, filters.truckId, filters.driverId, filters.customer, filters.departureCity, filters.destinationCity, filters.paidOption, filters.startDate, filters.endDate, filters.sortBy, filters.sortOrder);
     } catch (err) {
       setError(err.message || 'Failed to add installment');
     } finally {
@@ -1172,6 +1181,24 @@ const Journeys = () => {
                 <option value="full">Full Payment</option>
                 <option value="installment">Installment</option>
               </select>
+
+              <input
+                type="date"
+                name="startDate"
+                value={filters.startDate}
+                onChange={handleFilterChange}
+                className="filter-date-input"
+                placeholder="Start Date"
+              />
+
+              <input
+                type="date"
+                name="endDate"
+                value={filters.endDate}
+                onChange={handleFilterChange}
+                className="filter-date-input"
+                placeholder="End Date"
+              />
             </div>
           </div>
 
