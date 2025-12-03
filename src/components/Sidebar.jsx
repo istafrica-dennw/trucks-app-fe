@@ -100,6 +100,17 @@ const Sidebar = ({ isOpen, onClose }) => {
       adminOnlyAccess: true // Only admin can see reports
     },
     {
+      id: 'office-expenses',
+      label: 'Office Expenses',
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11.8 10.9C9.53 10.31 8.8 9.7 8.8 8.75C8.8 7.66 9.81 6.9 11.5 6.9C13.28 6.9 13.94 7.75 14 9H16.21C16.14 7.28 15.09 5.7 13 5.19V3H10V5.16C8.06 5.58 6.5 6.84 6.5 8.77C6.5 10.66 8.09 11.81 10.5 12.44C12.91 13.07 13.5 13.84 13.5 14.8C13.5 15.73 12.84 16.5 11 16.5C8.94 16.5 8.18 15.61 8 14H5.79C6 16.77 7.91 18.3 10 18.83V21H13V18.85C14.95 18.5 16.5 17.35 16.5 15.3C16.5 13.46 14.99 12.19 11.8 10.9Z" fill="currentColor"/>
+        </svg>
+      ),
+      path: isAdminOrOfficer() ? '/admin/office-expenses' : '/office-expenses',
+      adminOnly: false
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: (

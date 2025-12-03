@@ -24,6 +24,7 @@ const Reports = () => {
   const [trucks, setTrucks] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [customers, setCustomers] = useState([]);
+  const [includeOfficeExpenses, setIncludeOfficeExpenses] = useState(false);
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -106,18 +107,21 @@ const Reports = () => {
           const dailyParams = new URLSearchParams();
           if (selectedTruck) dailyParams.append('truckId', selectedTruck);
           if (selectedCustomer) dailyParams.append('customerId', selectedCustomer);
+          if (includeOfficeExpenses && !selectedTruck && !selectedCustomer) dailyParams.append('includeOfficeExpenses', 'true');
           url = createApiUrl(`api/reports/daily/${selectedDate}${dailyParams.toString() ? `?${dailyParams.toString()}` : ''}`);
           break;
         case 'weekly':
           const weeklyParams = new URLSearchParams();
           if (selectedTruck) weeklyParams.append('truckId', selectedTruck);
           if (selectedCustomer) weeklyParams.append('customerId', selectedCustomer);
+          if (includeOfficeExpenses && !selectedTruck && !selectedCustomer) weeklyParams.append('includeOfficeExpenses', 'true');
           url = createApiUrl(`api/reports/weekly/${selectedWeek}${weeklyParams.toString() ? `?${weeklyParams.toString()}` : ''}`);
           break;
         case 'monthly':
           const monthlyParams = new URLSearchParams();
           if (selectedTruck) monthlyParams.append('truckId', selectedTruck);
           if (selectedCustomer) monthlyParams.append('customerId', selectedCustomer);
+          if (includeOfficeExpenses && !selectedTruck && !selectedCustomer) monthlyParams.append('includeOfficeExpenses', 'true');
           url = createApiUrl(`api/reports/monthly/${selectedMonth}${monthlyParams.toString() ? `?${monthlyParams.toString()}` : ''}`);
           break;
         case 'custom':
@@ -132,12 +136,16 @@ const Reports = () => {
           if (selectedCustomer && selectedCustomer.trim() !== '') {
             params.append('customerId', selectedCustomer);
           }
+          if (includeOfficeExpenses && !selectedTruck && !selectedCustomer) {
+            params.append('includeOfficeExpenses', 'true');
+          }
           url = createApiUrl(`api/reports/custom?${params.toString()}`);
           break;
         case 'summary':
           const summaryParams = new URLSearchParams();
           if (selectedTruck) summaryParams.append('truckId', selectedTruck);
           if (selectedCustomer) summaryParams.append('customerId', selectedCustomer);
+          if (includeOfficeExpenses && !selectedTruck && !selectedCustomer) summaryParams.append('includeOfficeExpenses', 'true');
           url = createApiUrl(`api/reports/summary${summaryParams.toString() ? `?${summaryParams.toString()}` : ''}`);
           break;
         default:
@@ -170,7 +178,7 @@ const Reports = () => {
     if (token) {
       fetchReport();
     }
-  }, [reportType, selectedDate, selectedWeek, selectedMonth, dateRange, groupBy, selectedTruck, selectedCustomer, token]);
+  }, [reportType, selectedDate, selectedWeek, selectedMonth, dateRange, groupBy, selectedTruck, selectedCustomer, includeOfficeExpenses, token]);
 
   // Format currency - reports always show in RWF
   const formatCurrency = (amount) => {
@@ -240,7 +248,10 @@ const Reports = () => {
       pushRow(['Summary']);
       pushRow(['Total Journeys', summary.totalDrives]);
       pushRow(['Total Revenue', summary.totalAmount]);
-      pushRow(['Total Expenses', summary.totalExpenses]);
+      pushRow(['Journey Expenses', summary.totalExpenses]);
+      if (summary.officeExpenses !== undefined) {
+        pushRow(['Office Expenses', summary.officeExpenses]);
+      }
       pushRow(['Total Paid', summary.totalPaid]);
       pushRow(['Balance (Unpaid)', summary.balance || 0]);
       pushRow(['Net Profit', summary.netProfit]);
@@ -250,10 +261,18 @@ const Reports = () => {
     // Breakdown
     if (Array.isArray(reportData.breakdown) && reportData.breakdown.length) {
       pushRow(['Breakdown']);
-      pushRow(['Date', 'Journeys', 'Revenue', 'Expenses', 'Paid', 'Balance (Unpaid)', 'Profit']);
-      reportData.breakdown.forEach(d => {
-        pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.totalPaid, d.balance || 0, d.netProfit]);
-      });
+      const hasOfficeExpenses = reportData.breakdown.some(d => d.officeExpenses !== undefined);
+      if (hasOfficeExpenses) {
+        pushRow(['Date', 'Journeys', 'Revenue', 'Journey Expenses', 'Office Expenses', 'Paid', 'Balance (Unpaid)', 'Profit']);
+        reportData.breakdown.forEach(d => {
+          pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.officeExpenses || 0, d.totalPaid, d.balance || 0, d.netProfit]);
+        });
+      } else {
+        pushRow(['Date', 'Journeys', 'Revenue', 'Journey Expenses', 'Paid', 'Balance (Unpaid)', 'Profit']);
+        reportData.breakdown.forEach(d => {
+          pushRow([d.date, d.totalDrives, d.totalAmount, d.totalExpenses, d.totalPaid, d.balance || 0, d.netProfit]);
+        });
+      }
     }
 
     return rows.join('\n');
@@ -295,9 +314,15 @@ const Reports = () => {
             <div className="summary-value">{formatCurrency(summary.totalAmount)}</div>
           </div>
           <div className="summary-card">
-            <div className="summary-label">Total Expenses</div>
+            <div className="summary-label">Journey Expenses</div>
             <div className="summary-value">{formatCurrency(summary.totalExpenses)}</div>
           </div>
+          {summary.officeExpenses !== undefined && (
+            <div className="summary-card">
+              <div className="summary-label">Office Expenses</div>
+              <div className="summary-value">{formatCurrency(summary.officeExpenses)}</div>
+            </div>
+          )}
           <div className="summary-card">
             <div className="summary-label">Total Paid</div>
             <div className="summary-value">{formatCurrency(summary.totalPaid)}</div>
@@ -328,7 +353,8 @@ const Reports = () => {
             <div>Date</div>
             <div>Journeys</div>
             <div>Revenue</div>
-            <div>Expenses</div>
+            <div>Journey Expenses</div>
+            {breakdown.some(d => d.officeExpenses !== undefined) && <div>Office Expenses</div>}
             <div>Paid</div>
             <div>Balance (Unpaid)</div>
             <div>Profit</div>
@@ -339,6 +365,9 @@ const Reports = () => {
               <div>{formatNumber(day.totalDrives)}</div>
               <div>{formatCurrency(day.totalAmount)}</div>
               <div>{formatCurrency(day.totalExpenses)}</div>
+              {breakdown.some(d => d.officeExpenses !== undefined) && (
+                <div>{formatCurrency(day.officeExpenses || 0)}</div>
+              )}
               <div>{formatCurrency(day.totalPaid)}</div>
               <div className={(day.balance || 0) > 0 ? 'loss' : 'profit'}>
                 {formatCurrency(day.balance || 0)}
@@ -415,7 +444,12 @@ const Reports = () => {
             <label>Filter by Truck (Optional):</label>
             <select 
               value={selectedTruck} 
-              onChange={(e) => setSelectedTruck(e.target.value)}
+              onChange={(e) => {
+                setSelectedTruck(e.target.value);
+                if (e.target.value) {
+                  setIncludeOfficeExpenses(false); // Uncheck when truck is selected
+                }
+              }}
               className="truck-select"
             >
               <option value="">All Trucks</option>
@@ -431,7 +465,12 @@ const Reports = () => {
             <label>Filter by Customer (Optional):</label>
             <select 
               value={selectedCustomer} 
-              onChange={(e) => setSelectedCustomer(e.target.value)}
+              onChange={(e) => {
+                setSelectedCustomer(e.target.value);
+                if (e.target.value) {
+                  setIncludeOfficeExpenses(false); // Uncheck when customer is selected
+                }
+              }}
               className="customer-select"
             >
               <option value="">All Customers</option>
@@ -442,6 +481,19 @@ const Reports = () => {
               ))}
             </select>
           </div>
+
+          {!selectedTruck && !selectedCustomer && (
+            <div className="office-expenses-checkbox">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={includeOfficeExpenses}
+                  onChange={(e) => setIncludeOfficeExpenses(e.target.checked)}
+                />
+                Include office expenses
+              </label>
+            </div>
+          )}
 
           {reportType === 'daily' && (
             <div className="date-input">

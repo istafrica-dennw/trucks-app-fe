@@ -8,6 +8,7 @@ import Drivers from './pages/Drivers';
 import Customers from './pages/Customers';
 import Journeys from './pages/Journeys';
 import Reports from './pages/Reports';
+import OfficeExpenses from './pages/OfficeExpenses';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -122,6 +123,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/admin/office-expenses" 
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <OfficeExpenses />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* User routes - accessible to all authenticated users */}
       <Route 
@@ -161,6 +170,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Reports />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/office-expenses" 
+        element={
+          <ProtectedRoute>
+            <OfficeExpenses />
           </ProtectedRoute>
         } 
       />
