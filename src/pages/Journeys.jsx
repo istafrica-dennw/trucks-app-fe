@@ -2375,6 +2375,19 @@ const Journeys = () => {
                 {renderFieldError('notes')}
               </div>
 
+              <div className="form-group">
+                <label htmlFor="edit-date">Date *</label>
+                <input
+                  type="date"
+                  id="edit-date"
+                  name="date"
+                  value={selectedJourney.date ? new Date(selectedJourney.date).toISOString().split('T')[0] : ''}
+                  onChange={handleInputChange}
+                  required
+                />
+                {renderFieldError('date')}
+              </div>
+
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={handleCloseModal}>
                   Cancel
